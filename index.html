@@ -268,7 +268,7 @@
 
       <!-- Search Input -->
       <div id="searchBoxContainer" class="relative mb-2">
-        <input id="searchInput" type="text" placeholder="輸入路線 (如 37M, 38, B6, S1, E36, 968, 屯馬綫)..." 
+        <input id="searchInput" type="text" placeholder="輸入路線 (如 276P, 37M, 38, B6, S1, E36, 968, 屯馬綫)..." 
                oninput="handleSearchInputDebounce()"
                class="w-full bg-canvas py-3.5 pl-11 pr-4 rounded-2xl text-sm font-bold text-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-orange/40 uppercase">
         <svg class="w-5 h-5 text-brand-gray absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,6 +283,7 @@
       <!-- Quick Chips -->
       <div id="quickChipsContainer" class="flex items-center space-x-1.5 overflow-x-auto hide-scrollbar mb-3 py-1">
         <span class="text-[11px] font-bold text-brand-gray shrink-0">熱門路線:</span>
+        <button onclick="quickSearch('276P', 'KMB')" class="px-2.5 py-1 rounded-xl bg-red-50 text-red-600 text-xs font-bold shrink-0">276P (天水圍/上水)</button>
         <button onclick="quickSearch('37M', 'NLB')" class="px-2.5 py-1 rounded-xl bg-teal-50 text-teal-700 text-xs font-bold shrink-0">37M (迎東/東涌)</button>
         <button onclick="quickSearch('38', 'NLB')" class="px-2.5 py-1 rounded-xl bg-teal-50 text-teal-700 text-xs font-bold shrink-0">38 (逸東/東涌)</button>
         <button onclick="quickSearch('B6', 'NLB')" class="px-2.5 py-1 rounded-xl bg-teal-50 text-teal-700 text-xs font-bold shrink-0">B6 (大橋香港口岸)</button>
@@ -290,8 +291,8 @@
         <button onclick="quickSearch('E36', 'KMB')" class="px-2.5 py-1 rounded-xl bg-red-50 text-red-600 text-xs font-bold shrink-0">E36 (元朗/機場)</button>
         <button onclick="selectMtrLine('TCL')" class="px-2.5 py-1 rounded-xl bg-orange-50 text-[#E07A20] text-xs font-bold shrink-0">東涌綫</button>
         <button onclick="selectMtrLine('TML')" class="px-2.5 py-1 rounded-xl bg-amber-50 text-[#923011] text-xs font-bold shrink-0">屯馬綫</button>
-        <button onclick="quickSearch('B1', 'KMB')" class="px-2.5 py-1 rounded-xl bg-red-50 text-red-600 text-xs font-bold shrink-0">B1 (形點/落馬洲)</button>
-        <button onclick="quickSearch('968', 'KMB')" class="px-2.5 py-1 rounded-xl bg-red-50 text-red-600 text-xs font-bold shrink-0">968 (元朗/天后)</button>
+        <button onclick="quickSearch('B1', 'KMB')" class="px-2.5 py-1 rounded-xl bg-red-50 text-red-600 text-xs font-bold shrink-0">B1 (天水圍/落馬洲)</button>
+        <button onclick="quickSearch('968', 'KMB')" class="px-2.5 py-1 rounded-xl bg-red-50 text-red-600 text-xs font-bold shrink-0">968 (元朗/銅鑼灣)</button>
       </div>
 
       <button onclick="handleSearchRouteSubmit()" class="w-full bg-brand-dark text-white font-bold py-3.5 rounded-2xl text-sm active:scale-[0.98] transition shadow-md">
@@ -479,6 +480,7 @@
 
     const kmbStopNameCache = new Map();
     const ctbStopNameCache = new Map();
+    let kmbRoutesCache = [];
     let nlbRoutesCache = [];
     let ctbRoutesCache = [];
     let searchFilterCompany = 'ALL';
@@ -524,8 +526,11 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
       renderMultiBusCardsSkeleton();
+      
+      // Pre-warm route caches concurrently
       fetchNlbRoutes();
       fetchCtbRoutes();
+      fetchKmbRoutes();
 
       await refreshAllBusesETA();
 
@@ -546,6 +551,26 @@
       showToast("已重設為預設路線");
       toggleBookmarksModal(false);
       refreshAllBusesETA();
+    }
+
+    // -------------------------------------------------------------------------
+    // KMB Route List Cache
+    // -------------------------------------------------------------------------
+    async function fetchKmbRoutes() {
+      if (kmbRoutesCache && kmbRoutesCache.length > 0) return kmbRoutesCache;
+      try {
+        const res = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route/');
+        if (res.ok) {
+          const json = await res.json();
+          if (json && json.data && Array.isArray(json.data)) {
+            kmbRoutesCache = json.data;
+            return kmbRoutesCache;
+          }
+        }
+      } catch (e) {
+        console.warn("KMB Route Cache Error", e);
+      }
+      return [];
     }
 
     // -------------------------------------------------------------------------
@@ -971,6 +996,7 @@
       }
 
       let html = '';
+      let needsSave = false;
 
       monitoredBuses.forEach((bus, index) => {
         const isMtr = bus.company === 'MTR';
@@ -984,6 +1010,36 @@
         const nextBus = hasData ? etaResult[0] : null;
         const subsequentBus = (hasData && etaResult.length > 1) ? etaResult[1] : null;
         const thirdBus = (hasData && etaResult.length > 2) ? etaResult[2] : null;
+
+        // Auto-heal destination from ETA response or Cache if destination was generic "終點站"
+        let displayDest = bus.dest;
+        if (nextBus && nextBus.dest && nextBus.dest.trim()) {
+          displayDest = nextBus.dest.trim();
+          if (!bus.dest || bus.dest === '終點站') {
+            bus.dest = displayDest;
+            needsSave = true;
+          }
+        } else if (!displayDest || displayDest === '終點站') {
+          if (bus.company === 'KMB' && kmbRoutesCache.length > 0) {
+            const bound = bus.direction === 'inbound' ? 'I' : 'O';
+            const matched = kmbRoutesCache.find(r => r.route.toUpperCase() === bus.route.toUpperCase() && r.bound === bound)
+                         || kmbRoutesCache.find(r => r.route.toUpperCase() === bus.route.toUpperCase());
+            if (matched && matched.dest_tc) {
+              displayDest = matched.dest_tc;
+              bus.dest = displayDest;
+              needsSave = true;
+            }
+          } else if (bus.company === 'CTB' && ctbRoutesCache.length > 0) {
+            const matched = ctbRoutesCache.find(r => r.route.toUpperCase() === bus.route.toUpperCase());
+            if (matched) {
+              displayDest = bus.direction === 'inbound' ? (matched.orig_tc || matched.dest_tc) : matched.dest_tc;
+              if (displayDest) {
+                bus.dest = displayDest;
+                needsSave = true;
+              }
+            }
+          }
+        }
 
         const hasValidMin = nextBus && nextBus.minutes !== null;
         const isArriving = hasValidMin && nextBus.minutes <= 0;
@@ -1033,7 +1089,7 @@
                   <span class="w-2 h-2 rounded-full ${isMtr ? 'bg-brand-mtr' : (isNlb ? 'bg-brand-nlb' : 'bg-brand-orange')}"></span>
                   <span>${bus.stopName}</span>
                 </div>
-                <div class="text-xs font-medium text-brand-gray mt-0.5">往 ${bus.dest || '終點站'}</div>
+                <div class="text-xs font-medium text-brand-gray mt-0.5">往 ${displayDest || '終點站'}</div>
               </div>
 
               <!-- Main ETA Counter Highlight -->
@@ -1088,6 +1144,10 @@
       });
 
       container.innerHTML = html;
+
+      if (needsSave) {
+        saveMonitoredBuses();
+      }
     }
 
     function removeMonitoredBus(index) {
@@ -1134,7 +1194,7 @@
           direction: item.direction || 'outbound',
           serviceType: item.serviceType || '1',
           routeId: item.routeId || '',
-          dest: item.dest,
+          dest: item.dest || '終點站',
           selectedStopId: item.stopId
         };
       }
@@ -1181,7 +1241,8 @@
       const exists = monitoredBuses.some(b => 
         b.company === explorerRoute.company && 
         b.route === explorerRoute.route && 
-        String(b.stopId) === String(stopId)
+        String(b.stopId) === String(stopId) &&
+        b.direction === explorerRoute.direction
       );
 
       if (exists) {
@@ -1189,8 +1250,19 @@
         return;
       }
 
+      // Ensure destination is not empty
+      let finalDest = explorerRoute.dest;
+      if (!finalDest || finalDest === '終點站') {
+        if (explorerRoute.company === 'KMB' && kmbRoutesCache.length > 0) {
+          const bound = explorerRoute.direction === 'inbound' ? 'I' : 'O';
+          const matched = kmbRoutesCache.find(r => r.route.toUpperCase() === explorerRoute.route.toUpperCase() && r.bound === bound)
+                       || kmbRoutesCache.find(r => r.route.toUpperCase() === explorerRoute.route.toUpperCase());
+          if (matched && matched.dest_tc) finalDest = matched.dest_tc;
+        }
+      }
+
       monitoredBuses.push({
-        id: `${explorerRoute.company}-${explorerRoute.route}-${stopId}-${Date.now()}`,
+        id: `${explorerRoute.company}-${explorerRoute.route}-${stopId}-${explorerRoute.direction || 'outbound'}-${Date.now()}`,
         company: explorerRoute.company,
         line: '',
         route: explorerRoute.route,
@@ -1198,7 +1270,7 @@
         serviceType: explorerRoute.serviceType || '1',
         stopId: stopId,
         stopName: stopName,
-        dest: explorerRoute.dest,
+        dest: finalDest || '終點站',
         routeId: explorerRoute.routeId || ''
       });
 
@@ -1391,6 +1463,21 @@
           }).join('');
 
         } else {
+          // KMB Route Stops
+          const kmbRoutes = await fetchKmbRoutes();
+          const targetBound = explorerRoute.direction === 'inbound' ? 'I' : 'O';
+          const matchedRoute = kmbRoutes.find(r => 
+            r.route.toUpperCase() === explorerRoute.route.toUpperCase() && 
+            r.bound === targetBound && 
+            (explorerRoute.serviceType ? r.service_type === explorerRoute.serviceType : true)
+          ) || kmbRoutes.find(r => r.route.toUpperCase() === explorerRoute.route.toUpperCase() && r.bound === targetBound)
+            || kmbRoutes.find(r => r.route.toUpperCase() === explorerRoute.route.toUpperCase());
+
+          if (matchedRoute && matchedRoute.dest_tc) {
+            explorerRoute.dest = matchedRoute.dest_tc;
+            document.getElementById('stopsModalSubtitle').innerText = `往 ${explorerRoute.dest} - 點選車站加入看板`;
+          }
+
           const url = `https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${explorerRoute.route}/${explorerRoute.direction}/${explorerRoute.serviceType || '1'}`;
           const res = await fetch(url);
           const data = await res.json();
@@ -1408,7 +1495,12 @@
           );
 
           container.innerHTML = stopsWithNames.map(item => {
-            const isAlreadyMonitored = monitoredBuses.some(b => b.company === 'KMB' && b.route === explorerRoute.route && String(b.stopId) === String(item.stop));
+            const isAlreadyMonitored = monitoredBuses.some(b => 
+              b.company === 'KMB' && 
+              b.route === explorerRoute.route && 
+              String(b.stopId) === String(item.stop) &&
+              b.direction === explorerRoute.direction
+            );
             return `
               <div onclick="addStopToMonitoredBoard('${item.stop}', '${item.stopName}')" class="p-3 rounded-2xl flex items-center justify-between cursor-pointer transition ${isAlreadyMonitored ? 'bg-red-50 border border-red-200' : 'bg-canvas hover:bg-gray-200/70'}">
                 <div class="flex items-center space-x-3 text-xs">
@@ -1470,6 +1562,26 @@
 
       if (explorerRoute.company === 'CTB') {
         explorerRoute.direction = explorerRoute.direction === 'outbound' ? 'inbound' : 'outbound';
+        const ctbRoutes = await fetchCtbRoutes();
+        const matched = ctbRoutes.find(r => r.route.toUpperCase() === explorerRoute.route.toUpperCase());
+        if (matched) {
+          explorerRoute.dest = explorerRoute.direction === 'outbound' ? (matched.dest_tc || '終點站') : (matched.orig_tc || matched.dest_tc || '終點站');
+        }
+        renderStopsExplorerModal();
+        return;
+      }
+
+      if (explorerRoute.company === 'KMB') {
+        explorerRoute.direction = explorerRoute.direction === 'outbound' ? 'inbound' : 'outbound';
+        const kmbRoutes = await fetchKmbRoutes();
+        const targetBound = explorerRoute.direction === 'inbound' ? 'I' : 'O';
+        const matchedRoute = kmbRoutes.find(r => 
+          r.route.toUpperCase() === explorerRoute.route.toUpperCase() && 
+          r.bound === targetBound
+        );
+        if (matchedRoute && matchedRoute.dest_tc) {
+          explorerRoute.dest = matchedRoute.dest_tc;
+        }
         renderStopsExplorerModal();
         return;
       }
@@ -1506,7 +1618,7 @@
                 <span class="text-[10px] px-1.5 py-0.5 rounded ${pillBg} ${pillText} font-bold">${comp.name}</span>
                 <span class="text-sm font-extrabold text-brand-dark">${b.route}</span>
               </div>
-              <div class="text-xs text-brand-gray mt-0.5">${b.stopName} 往 ${b.dest}</div>
+              <div class="text-xs text-brand-gray mt-0.5">${b.stopName} 往 ${b.dest || '終點站'}</div>
             </div>
             <div class="flex items-center space-x-1.5">
               <button onclick="addBookmarkToBoard(${idx})" class="text-xs font-bold px-2.5 py-1 rounded-xl transition ${isMonitored ? 'bg-gray-200 text-gray-600' : 'bg-brand-orange text-white active:scale-95'}">
@@ -1667,6 +1779,7 @@
             company: 'NLB',
             route: r.routeNo,
             routeId: r.routeId,
+            direction: 'outbound',
             dest: dest,
             label: `嶼巴 ${r.routeNo}`,
             subLabel: `往 ${dest}`,
@@ -1683,6 +1796,7 @@
             company: 'CTB',
             route: r.route,
             routeId: '',
+            direction: 'outbound',
             dest: r.dest_tc || '終點站',
             label: `城巴 ${r.route}`,
             subLabel: `往 ${r.dest_tc || '終點站'}`,
@@ -1698,6 +1812,7 @@
               company: 'MTR',
               line: code,
               route: l.name,
+              direction: 'UP',
               dest: l.upDest,
               label: `港鐵 ${l.name}`,
               subLabel: `${l.downDest} ⇄ ${l.upDest}`,
@@ -1708,25 +1823,45 @@
       }
 
       if (searchFilterCompany === 'ALL' || searchFilterCompany === 'KMB') {
-        matches.push({
-          company: 'KMB',
-          route: input,
-          dest: '終點站',
-          label: `九巴/龍運 ${input}`,
-          subLabel: `搜尋 ${input} 號線全綫站表`,
-          tagBg: 'bg-red-50 text-red-600'
-        });
+        const kmbRoutes = await fetchKmbRoutes();
+        const kmbMatches = kmbRoutes.filter(r => r.route.toUpperCase().startsWith(input) || r.route.toUpperCase() === input);
+        
+        if (kmbMatches.length > 0) {
+          kmbMatches.slice(0, 6).forEach(r => {
+            const dir = (r.bound === 'I' || r.bound === 'inbound') ? 'inbound' : 'outbound';
+            matches.push({
+              company: 'KMB',
+              route: r.route,
+              serviceType: r.service_type || '1',
+              direction: dir,
+              dest: r.dest_tc,
+              label: `九巴/龍運 ${r.route}`,
+              subLabel: `往 ${r.dest_tc} (由 ${r.orig_tc})`,
+              tagBg: 'bg-red-50 text-red-600'
+            });
+          });
+        } else {
+          matches.push({
+            company: 'KMB',
+            route: input,
+            direction: 'outbound',
+            dest: '',
+            label: `九巴/龍運 ${input}`,
+            subLabel: `搜尋 ${input} 號線全綫站表`,
+            tagBg: 'bg-red-50 text-red-600'
+          });
+        }
       }
 
       if (matches.length > 0) {
         container.innerHTML = matches.map(m => `
-          <div onclick="selectDirectRoute('${m.company}', '${m.route}', '${m.routeId || ''}', '${m.dest || ''}', '${m.line || ''}')" 
+          <div onclick="selectDirectRoute('${m.company}', '${m.route}', '${m.routeId || ''}', '${m.dest || ''}', '${m.line || ''}', '${m.direction || 'outbound'}')" 
                class="p-2.5 bg-white rounded-xl flex items-center justify-between cursor-pointer hover:bg-orange-50 transition border border-gray-100 shadow-sm">
             <div class="flex items-center space-x-2">
               <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-lg ${m.tagBg}">${m.company}</span>
               <span class="text-xs font-extrabold text-brand-dark">${m.label}</span>
             </div>
-            <span class="text-[11px] font-semibold text-brand-gray truncate max-w-[140px]">${m.subLabel}</span>
+            <span class="text-[11px] font-semibold text-brand-gray truncate max-w-[170px]">${m.subLabel}</span>
           </div>
         `).join('');
         container.classList.remove('hidden');
@@ -1735,20 +1870,50 @@
       }
     }
 
-    function selectDirectRoute(company, route, routeId = '', dest = '', line = '') {
+    async function selectDirectRoute(company, route, routeId = '', dest = '', line = '', direction = 'outbound') {
       if (company === 'MTR') {
         selectMtrLine(line || 'TCL');
         return;
+      }
+
+      let finalDest = dest;
+      if (!finalDest || finalDest === '終點站') {
+        if (company === 'KMB') {
+          const routes = await fetchKmbRoutes();
+          const bound = direction === 'inbound' ? 'I' : 'O';
+          const matched = routes.find(r => r.route.toUpperCase() === route.toUpperCase() && r.bound === bound) 
+                       || routes.find(r => r.route.toUpperCase() === route.toUpperCase());
+          if (matched) {
+            finalDest = matched.dest_tc;
+          }
+        } else if (company === 'CTB') {
+          const routes = await fetchCtbRoutes();
+          const matched = routes.find(r => r.route.toUpperCase() === route.toUpperCase());
+          if (matched) {
+            finalDest = direction === 'inbound' ? (matched.orig_tc || matched.dest_tc) : matched.dest_tc;
+          }
+        } else if (company === 'NLB') {
+          const routes = await fetchNlbRoutes();
+          const matched = routes.find(r => r.routeNo.toUpperCase() === route.toUpperCase());
+          if (matched && matched.routeName_c) {
+            if (matched.routeName_c.includes('>')) {
+              const parts = matched.routeName_c.split('>');
+              finalDest = parts.length > 1 ? parts[1].trim() : parts[0].trim();
+            } else {
+              finalDest = matched.routeName_c;
+            }
+          }
+        }
       }
 
       explorerRoute = {
         company: company,
         line: line || '',
         route: route,
-        direction: 'outbound',
+        direction: direction || 'outbound',
         serviceType: '1',
         routeId: routeId || '',
-        dest: dest || '終點站'
+        dest: finalDest || '終點站'
       };
 
       toggleSearchModal(false);
@@ -1801,6 +1966,8 @@
           dest: dest
         };
       } else if (searchFilterCompany === 'CTB') {
+        const ctbRoutes = await fetchCtbRoutes();
+        const ctbMatch = ctbRoutes.find(r => r.route.toUpperCase() === input);
         explorerRoute = {
           company: 'CTB',
           line: '',
@@ -1808,9 +1975,12 @@
           direction: 'outbound',
           serviceType: '1',
           routeId: '',
-          dest: '終點站'
+          dest: ctbMatch ? (ctbMatch.dest_tc || '終點站') : '終點站'
         };
       } else {
+        const kmbRoutes = await fetchKmbRoutes();
+        const kmbMatch = kmbRoutes.find(r => r.route.toUpperCase() === input && r.bound === 'O')
+                      || kmbRoutes.find(r => r.route.toUpperCase() === input);
         explorerRoute = {
           company: 'KMB',
           line: '',
@@ -1818,7 +1988,7 @@
           direction: 'outbound',
           serviceType: '1',
           routeId: '',
-          dest: '終點站'
+          dest: kmbMatch ? (kmbMatch.dest_tc || '終點站') : '終點站'
         };
       }
 
