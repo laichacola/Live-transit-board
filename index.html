@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Transit-board">
-  <title>Transit</title>
+  <meta name="apple-mobile-web-app-title" content="香港交通實時看板">
+  <title>香港實時到站看板 (極簡版)</title>
   
   <!-- Google Fonts: Plus Jakarta Sans & Noto Sans HK -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -464,8 +464,8 @@
       }
     ];
 
-    let monitoredBuses = JSON.parse(localStorage.getItem('hk_monitored_transit_ultramin_v1')) || DEFAULT_MONITORED_BUSES;
-    let bookmarks = JSON.parse(localStorage.getItem('hk_bookmarks_ultramin_v1')) || [];
+    let monitoredBuses = JSON.parse(localStorage.getItem('hk_monitored_transit_ultramin_v2')) || DEFAULT_MONITORED_BUSES;
+    let bookmarks = JSON.parse(localStorage.getItem('hk_bookmarks_ultramin_v2')) || [];
     
     let explorerRoute = {
       company: 'NLB',
@@ -537,7 +537,7 @@
     });
 
     function saveMonitoredBuses() {
-      localStorage.setItem('hk_monitored_transit_ultramin_v1', JSON.stringify(monitoredBuses));
+      localStorage.setItem('hk_monitored_transit_ultramin_v2', JSON.stringify(monitoredBuses));
     }
 
     function resetToDefaultBuses() {
@@ -548,7 +548,9 @@
       refreshAllBusesETA();
     }
 
-    // NLB API Connectors
+    // -------------------------------------------------------------------------
+    // NLB API Connectors (with Cache-Buster & Expired ETA Filter)
+    // -------------------------------------------------------------------------
     async function fetchNlbRoutes() {
       if (nlbRoutesCache && nlbRoutesCache.length > 0) return nlbRoutesCache;
       try {
@@ -584,20 +586,29 @@
       }
       if (!routeId || !stopId) return [];
 
-      const now = new Date().getTime();
+      const now = Date.now();
+      const cacheBuster = `_t=${now}`;
       const endpoints = [
-        `https://rt.data.gov.hk/v2/transport/nlb/stop.php?action=estimatedArrivals&routeId=${routeId}&stopId=${stopId}&language=zh`,
-        `https://rt.data.gov.hk/v1/transport/nlb/stop.php?action=estimatedArrivals&routeId=${routeId}&stopId=${stopId}&language=zh`
+        `https://rt.data.gov.hk/v2/transport/nlb/stop.php?action=estimatedArrivals&routeId=${routeId}&stopId=${stopId}&language=zh&${cacheBuster}`,
+        `https://rt.data.gov.hk/v1/transport/nlb/stop.php?action=estimatedArrivals&routeId=${routeId}&stopId=${stopId}&language=zh&${cacheBuster}`
       ];
 
       for (const url of endpoints) {
         try {
-          const res = await fetch(url);
+          const res = await fetch(url, { cache: 'no-store' });
           if (res.ok) {
             const data = await res.json();
             if (data && data.estimatedArrivals && Array.isArray(data.estimatedArrivals) && data.estimatedArrivals.length > 0) {
               return data.estimatedArrivals
-                .filter(item => item && (item.estimatedArrivalTime || item.departed === 1))
+                .filter(item => {
+                  if (!item) return false;
+                  if (item.departed === 1) return false;
+                  if (!item.estimatedArrivalTime) return true;
+                  const safeTimeStr = item.estimatedArrivalTime.includes('T') ? item.estimatedArrivalTime : item.estimatedArrivalTime.replace(' ', 'T');
+                  const etaTime = new Date(safeTimeStr).getTime();
+                  // Drop passed buses older than 60s ago
+                  return isNaN(etaTime) || (etaTime - now) >= -60000;
+                })
                 .map(item => {
                   const rawTime = item.estimatedArrivalTime || "";
                   const safeTimeStr = rawTime.includes('T') ? rawTime : rawTime.replace(' ', 'T');
@@ -609,7 +620,7 @@
 
                   return {
                     minutes: diffMinutes,
-                    remark: item.departed === 1 ? '已開出' : (item.routeVariantName || ''),
+                    remark: item.routeVariantName || '',
                     dest: '',
                     exactTime: exactTime,
                     isScheduledOnly: diffMinutes === null
@@ -624,12 +635,14 @@
       return [];
     }
 
-    // MTR ETA Engine
+    // -------------------------------------------------------------------------
+    // MTR ETA Engine (with Cache-Buster & Expired ETA Filter)
+    // -------------------------------------------------------------------------
     async function fetchMtrETA(line, station, direction) {
       if (!line || !station) return [];
       try {
-        const url = `https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${line}&sta=${station}&lang=TC`;
-        const res = await fetch(url);
+        const url = `https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=${line}&sta=${station}&lang=TC&_t=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) return [];
         const json = await res.json();
 
@@ -651,7 +664,12 @@
         const now = Date.now();
 
         return trains
-          .filter(t => t && t.time)
+          .filter(t => {
+            if (!t || !t.time) return false;
+            const safeTimeStr = t.time.replace(' ', 'T');
+            const tTime = new Date(safeTimeStr).getTime();
+            return isNaN(tTime) || (tTime - now) >= -60000;
+          })
           .map(t => {
             const destName = MTR_STATION_NAMES[t.dest] || t.dest || '';
             let diffMinutes = null;
@@ -690,14 +708,17 @@
       }
     }
 
-    // KMB ETA Engine
+    // -------------------------------------------------------------------------
+    // KMB / LWB ETA Engine (with Cache-Buster & Expired Past Bus Filter)
+    // -------------------------------------------------------------------------
     async function fetchKmbETA(stopId, route, serviceType = "1") {
-      const now = new Date().getTime();
+      const now = Date.now();
+      const cacheBuster = `_t=${now}`;
       let rawEtas = [];
 
       try {
-        const url = `https://data.etabus.gov.hk/v1/transport/kmb/eta/${stopId}/${route}/${serviceType || '1'}`;
-        const res = await fetch(url);
+        const url = `https://data.etabus.gov.hk/v1/transport/kmb/eta/${stopId}/${route}/${serviceType || '1'}?${cacheBuster}`;
+        const res = await fetch(url, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data && data.data && data.data.length > 0) {
@@ -710,8 +731,8 @@
 
       if (rawEtas.length === 0 && stopId) {
         try {
-          const url = `https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stopId}`;
-          const res = await fetch(url);
+          const url = `https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${stopId}?${cacheBuster}`;
+          const res = await fetch(url, { cache: 'no-store' });
           if (res.ok) {
             const data = await res.json();
             if (data && data.data && data.data.length > 0) {
@@ -725,8 +746,8 @@
 
       if (rawEtas.length === 0) {
         try {
-          const url = `https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/${serviceType || '1'}`;
-          const res = await fetch(url);
+          const url = `https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/${serviceType || '1'}?${cacheBuster}`;
+          const res = await fetch(url, { cache: 'no-store' });
           if (res.ok) {
             const data = await res.json();
             if (data && data.data && data.data.length > 0) {
@@ -740,42 +761,45 @@
 
       if (!rawEtas || rawEtas.length === 0) return [];
 
-      return rawEtas.map(item => {
-        if (!item.eta) {
-          return {
-            minutes: null,
-            remark: item.rmk_tc || '原定班次',
-            dest: item.dest_tc || '',
-            exactTime: '--:--',
-            isScheduledOnly: true
-          };
-        }
+      return rawEtas
+        .filter(item => {
+          if (!item.eta) return true; // keep scheduled-only
+          const etaTime = new Date(item.eta).getTime();
+          if (isNaN(etaTime)) return false;
+          // Drop buses that already passed over 60s ago
+          return (etaTime - now) >= -60000;
+        })
+        .map(item => {
+          if (!item.eta) {
+            return {
+              minutes: null,
+              remark: item.rmk_tc || '原定班次',
+              dest: item.dest_tc || '',
+              exactTime: '--:--',
+              isScheduledOnly: true
+            };
+          }
 
-        const etaDate = new Date(item.eta);
-        const etaTimestamp = etaDate.getTime();
-        if (isNaN(etaTimestamp)) {
+          const etaDate = new Date(item.eta);
+          const etaTimestamp = etaDate.getTime();
+          const diffMs = etaTimestamp - now;
+          const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+          const exactTime = formatTimeHM(etaDate);
+
           return {
-            minutes: null,
+            minutes: diffMinutes,
             remark: item.rmk_tc || '',
             dest: item.dest_tc || '',
-            exactTime: '--:--'
+            exactTime: exactTime,
+            isScheduledOnly: false
           };
-        }
-
-        const diffMinutes = Math.max(0, Math.floor((etaTimestamp - now) / 60000));
-        const exactTime = formatTimeHM(etaDate);
-
-        return {
-          minutes: diffMinutes,
-          remark: item.rmk_tc || '',
-          dest: item.dest_tc || '',
-          exactTime: exactTime,
-          isScheduledOnly: false
-        };
-      });
+        })
+        .sort((a, b) => (a.minutes ?? 999) - (b.minutes ?? 999));
     }
 
-    // CTB API Connectors
+    // -------------------------------------------------------------------------
+    // CTB API Connectors (with Cache-Buster & Expired ETA Filter)
+    // -------------------------------------------------------------------------
     async function fetchCtbRoutes() {
       if (ctbRoutesCache && ctbRoutesCache.length > 0) return ctbRoutesCache;
       try {
@@ -795,14 +819,18 @@
 
     async function fetchCtbETA(stopId, route) {
       try {
-        const url = `https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/${stopId}/${route}`;
-        const res = await fetch(url);
+        const url = `https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/${stopId}/${route}?_t=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) return [];
         const data = await res.json();
-        const now = new Date().getTime();
+        const now = Date.now();
 
         return (data.data || [])
-          .filter(item => item && item.eta)
+          .filter(item => {
+            if (!item || !item.eta) return false;
+            const etaTime = new Date(item.eta).getTime();
+            return isNaN(etaTime) || (etaTime - now) >= -60000;
+          })
           .map(item => {
             const etaDate = new Date(item.eta);
             const etaTime = etaDate.getTime();
@@ -814,7 +842,8 @@
               exactTime: !isNaN(etaTime) ? formatTimeHM(etaDate) : '--:--',
               isScheduledOnly: diffMinutes === null
             };
-          });
+          })
+          .sort((a, b) => (a.minutes ?? 999) - (b.minutes ?? 999));
       } catch (e) {
         console.warn("CTB ETA Error", e);
         return [];
@@ -858,7 +887,7 @@
       `).join('');
     }
 
-    // Refresh All Transit
+    // Refresh All Transit (Forces fresh data fetch)
     async function refreshAllBusesETA() {
       const pawIcon = document.getElementById('refreshPawIcon');
       pawIcon.classList.add('animate-paw');
@@ -904,7 +933,7 @@
 
       if (existingIndex >= 0) {
         bookmarks.splice(existingIndex, 1);
-        localStorage.setItem('hk_bookmarks_ultramin_v1', JSON.stringify(bookmarks));
+        localStorage.setItem('hk_bookmarks_ultramin_v2', JSON.stringify(bookmarks));
         showToast(`已從「我的收藏」移除 ${bus.route}`);
       } else {
         bookmarks.push({
@@ -919,7 +948,7 @@
           dest: bus.dest,
           routeId: bus.routeId || ''
         });
-        localStorage.setItem('hk_bookmarks_ultramin_v1', JSON.stringify(bookmarks));
+        localStorage.setItem('hk_bookmarks_ultramin_v2', JSON.stringify(bookmarks));
         showToast(`⭐ 已將 ${bus.route} - ${bus.stopName} 儲存到「我的收藏」！`);
       }
 
@@ -1521,7 +1550,7 @@
 
     function removeBookmark(idx) {
       const removed = bookmarks.splice(idx, 1);
-      localStorage.setItem('hk_bookmarks_ultramin_v1', JSON.stringify(bookmarks));
+      localStorage.setItem('hk_bookmarks_ultramin_v2', JSON.stringify(bookmarks));
       showToast(`已從收藏庫移除 ${removed[0]?.route || ''}`);
       renderBookmarksList();
       refreshAllBusesETA();
