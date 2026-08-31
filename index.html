@@ -967,24 +967,64 @@
         trafficSpeedSummary.className = 'text-xs font-bold text-emeraldAccent mt-0.5';
       }
 
-      // 4. Primary Headline & Advice
+      // 4. Decoupled Dynamic Decision Headline & Advice
       const statusIconEl = document.getElementById('commuteStatusIcon');
       const statusTextEl = document.getElementById('commuteStatusText');
       const detailAdviceEl = document.getElementById('commuteDetailAdvice');
 
-      if (hasRainWarning || congestedCount >= 2) {
-        statusIconEl.className = 'w-2.5 h-2.5 rounded-full bg-roseAccent inline-block shrink-0';
-        statusTextEl.innerText = isMorning ? '建議提早 15 分鐘出門！' : '建議提早安排放工行程！';
-        detailAdviceEl.innerText = `主要過海隧道或幹道多車受阻，分區有降雨可能，出門請帶備雨具並優先考慮乘搭鐵路。`;
-      } else if (congestedCount === 1 || hasRain) {
-        statusIconEl.className = 'w-2.5 h-2.5 rounded-full bg-amberAccent inline-block shrink-0';
-        statusTextEl.innerText = isMorning ? '建議提早 5-10 分鐘出門' : '留意路況 · 或有少許延誤';
-        detailAdviceEl.innerText = `路況大致正常但有局部車多/零散小雨，請留意下班班次到站時間。`;
+      let headline = '';
+      let advice = '';
+      let statusClass = 'w-2.5 h-2.5 rounded-full inline-block shrink-0 ';
+
+      const isHeavyTraffic = congestedCount >= 2;
+      const isModerateTraffic = congestedCount === 1;
+      const isFreeFlow = congestedCount === 0;
+
+      const isSevereWarning = latestWeatherWarnings.some(w => 
+        w.includes('黑') || w.includes('紅') || w.includes('八號') || w.includes('九號') || w.includes('十號')
+      );
+
+      if (isSevereWarning) {
+        statusClass += 'bg-roseAccent pulse-soft';
+        headline = isMorning ? '惡劣天氣警告 · 留意安全與班次' : '惡劣天氣警告 · 留意安全與交通';
+        advice = isHeavyTraffic 
+          ? '天文台發出惡劣天氣警告，幹道同時多處擠塞，出門請特別注意安全並建議選乘鐵路。'
+          : '天文台發出惡劣天氣警告，雖然主要幹道行車暢順，但風雨可能影響路面及步程，出門請帶備雨具。';
+      } else if (isHeavyTraffic && (hasRain || hasRainWarning)) {
+        statusClass += 'bg-roseAccent';
+        headline = isMorning ? '多處塞車及有雨 · 建議提早 15 分鐘' : '路面擠塞及有雨 · 建議預早安排';
+        advice = '主要過海隧道或幹道多車受阻，分區有降雨，出門請帶備雨具並優先考慮乘搭鐵路。';
+      } else if (isHeavyTraffic) {
+        statusClass += 'bg-roseAccent';
+        headline = isMorning ? '幹道多處擠塞 · 建議提早出門' : '幹道多處擠塞 · 建議提早安排行程';
+        advice = '天氣良好，但重點監控幹道/隧道行車緩慢或有擠塞，建議預留充足車程或改搭鐵路。';
+      } else if (hasRainWarning || originRain >= 5 || targetRain >= 5) {
+        statusClass += 'bg-amberAccent';
+        headline = isMorning ? '留意雨勢 · 建議預留雨天步程' : '留意雨勢 · 放工注意路面情況';
+        advice = isFreeFlow 
+          ? '各主要幹道行車暢順，但天文台發出天氣警告或分區有雨，步行到車站時請小心地滑並帶備雨具。'
+          : '部分路段車多且有顯著降雨，出門請帶備雨具，並預留少許交通緩衝時間。';
+      } else if (isModerateTraffic && hasRain) {
+        statusClass += 'bg-amberAccent';
+        headline = isMorning ? '局部車多及有雨 · 提早 5-10 分鐘' : '局部車多及有雨 · 留意路況';
+        advice = '部分主要走廊車流較多，沿途有局部降雨，出門請帶傘並留意最新班次時間。';
+      } else if (isModerateTraffic) {
+        statusClass += 'bg-amberAccent';
+        headline = isMorning ? '局部幹道車多 · 留意行車時間' : '局部幹道車多 · 留意路況';
+        advice = '天氣良好，但部分監控幹道車速偏慢，準時出門並留意實時班次即可。';
+      } else if (hasRain) {
+        statusClass += 'bg-emeraldAccent';
+        headline = isMorning ? '交通暢順 · 出門記得帶遮' : '路況良好 · 放工記得帶遮';
+        advice = '主要幹道行車暢通無阻，但出發地或目的地有零散降雨，出門帶把雨遮即可！';
       } else {
-        statusIconEl.className = 'w-2.5 h-2.5 rounded-full bg-emeraldAccent inline-block shrink-0';
-        statusTextEl.innerText = isMorning ? '交通暢順 · 準時出門即可' : '路況暢通 · 愉快回家';
-        detailAdviceEl.innerText = `天氣良好，各主要幹道行車速度理想，沿途未有特別封路或改道。`;
+        statusClass += 'bg-emeraldAccent';
+        headline = isMorning ? '交通暢順 · 準時出門即可' : '路況暢通 · 愉快回家';
+        advice = '天氣良好，各主要幹道行車速度理想，沿途未有特別封路或改道。';
       }
+
+      statusIconEl.className = statusClass;
+      statusTextEl.innerText = headline;
+      detailAdviceEl.innerText = advice;
 
       // Weather Warning Banner
       const warningBanner = document.getElementById('weatherWarningBanner');
