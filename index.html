@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="香港交通實時看板">
-  <title>香港實時到站看板 (極簡版)</title>
+  <meta name="apple-mobile-web-app-title" content="出門全能看板">
+  <title>出門全能儀表板 · Morning & Evening Commute Dashboard</title>
   
   <!-- Google Fonts: Plus Jakarta Sans & Noto Sans HK -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   
-  <!-- Tailwind CSS CDN -->
+  <!-- Tailwind CSS CDN with Custom Slate-Lavender Design Tokens -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -23,23 +23,33 @@
             sans: ['"Plus Jakarta Sans"', '"Noto Sans HK"', 'system-ui', 'sans-serif'],
           },
           colors: {
-            canvas: '#F4F6F9',
-            brand: {
-              orange: '#FF5722',
-              orangeHover: '#F44336',
-              dark: '#111827',
-              gray: '#8C95A6',
-              card: '#FFFFFF',
-              lightPill: '#EBEFF5',
-              mtr: '#A22030',
-              kmb: '#E60012',
-              nlb: '#00838F',
-              ctb: '#D97706'
-            }
+            app: '#FFFFFF',
+            surface: '#F4F5FB',
+            surfaceHover: '#EEF0F8',
+            surfaceCard: '#F7F8FC',
+            lavender: {
+              DEFAULT: '#7B78E5',
+              light: '#EEF0F8',
+              hover: '#6A67D6',
+              soft: '#E8E7FA'
+            },
+            charcoal: {
+              DEFAULT: '#1E1B4B',
+              heading: '#151336',
+              light: '#2D2A6E'
+            },
+            slateGray: {
+              DEFAULT: '#8A8FA3',
+              light: '#A5ABC0',
+              border: '#E3E6F0'
+            },
+            emeraldAccent: '#10B981',
+            amberAccent: '#F59E0B',
+            roseAccent: '#EF4444'
           },
-          boxShadow: {
-            'soft': '0 10px 30px -5px rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.02)',
-            'btn': '0 12px 24px -4px rgba(255, 87, 34, 0.35)',
+          borderRadius: {
+            '4xl': '2rem',
+            '5xl': '2.5rem'
           }
         }
       }
@@ -49,16 +59,17 @@
     body {
       -webkit-tap-highlight-color: transparent;
       user-select: none;
-      padding-bottom: max(20px, env(safe-area-inset-bottom));
+      background-color: #FFFFFF;
+      color: #1E1B4B;
+      padding-bottom: max(28px, env(safe-area-inset-bottom));
     }
     
-    /* Sticky Frosted Header */
     .safe-top-sticky {
       position: sticky;
       top: 0;
       z-index: 35;
-      padding-top: max(14px, env(safe-area-inset-top, 0px));
-      background: rgba(244, 246, 249, 0.94);
+      padding-top: max(16px, env(safe-area-inset-top, 0px));
+      background: rgba(255, 255, 255, 0.96);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
     }
@@ -68,66 +79,250 @@
 
     @keyframes pawPulse {
       0% { transform: scale(1) rotate(0deg); }
-      50% { transform: scale(1.25) rotate(-12deg); }
+      50% { transform: scale(1.2) rotate(-10deg); }
       100% { transform: scale(1) rotate(0deg); }
     }
     .animate-paw {
       animation: pawPulse 0.7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     }
+
+    @keyframes softGlowPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.96); }
+    }
+    .pulse-soft {
+      animation: softGlowPulse 2s ease-in-out infinite;
+    }
   </style>
 </head>
-<body class="bg-canvas text-brand-dark font-sans antialiased min-h-screen flex flex-col justify-between">
+<body class="bg-app text-charcoal font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-lavender/20">
 
-  <!-- Sticky Top Bar (Integrated Brand & Live Update Timestamp) -->
-  <header class="safe-top-sticky w-full border-b border-gray-200/40 transition-all">
-    <div class="max-w-md mx-auto px-5 py-2.5 flex items-center justify-between">
-      <div class="flex items-center space-x-2.5">
-        <div class="w-8 h-8 rounded-2xl bg-brand-dark text-white flex items-center justify-center font-extrabold text-xs shadow-sm shrink-0">
-          HK
+  <!-- Top Navigation & Live Time Bar -->
+  <header class="safe-top-sticky w-full border-b border-surfaceHover transition-all">
+    <div class="max-w-md mx-auto px-6 py-3.5 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <!-- Soft Circular Tint Line Icon -->
+        <div class="w-10 h-10 rounded-full bg-lavender-light text-lavender flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="4" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+          </svg>
         </div>
         <div class="flex flex-col">
-          <span class="text-[10px] font-extrabold tracking-wider text-brand-gray uppercase leading-none">LIVE TRANSIT BOARD</span>
-          <span id="lastGlobalUpdated" class="text-[11px] font-bold text-brand-dark/70 leading-tight mt-0.5">正在同步實時班次...</span>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-extrabold tracking-widest text-slateGray uppercase leading-none">COMMUTE HUB</span>
+            <span id="commuteModeTag" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-lavender-light text-lavender">上班模式</span>
+          </div>
+          <span id="headerUpdatedText" class="text-xs font-bold text-slateGray tracking-tight mt-0.5">更新於 --:--</span>
         </div>
       </div>
 
-      <!-- Top Action Buttons: Bookmarks & Add Route -->
-      <div class="flex items-center space-x-1.5 shrink-0">
-        <button onclick="toggleBookmarksModal(true)" class="px-3 py-1.5 rounded-full bg-white shadow-soft flex items-center gap-1 text-xs font-bold text-brand-dark active:scale-95 transition border border-gray-100" title="我的收藏">
-          <span class="text-amber-500">⭐</span>
-          <span>收藏</span>
+      <!-- Header Action Buttons -->
+      <div class="flex items-center space-x-2 shrink-0">
+        <!-- Commute Mode Toggle (Morning ⇄ Evening) -->
+        <button onclick="toggleCommuteMode()" class="px-3.5 py-1.5 rounded-full bg-surface hover:bg-surfaceHover border-2 border-slateGray-border text-xs font-bold text-charcoal transition active:scale-95 flex items-center gap-1.5" title="手動切換 上班 / 放工 模式">
+          <span id="commuteToggleIcon" class="text-xs">🌅</span>
+          <span id="commuteToggleLabel">返工</span>
         </button>
-        <button onclick="toggleSearchModal(true)" class="px-3 py-1.5 rounded-full bg-white shadow-soft flex items-center gap-1 text-xs font-bold text-brand-dark active:scale-95 transition border border-gray-100" title="搜尋並加入路線">
-          <svg class="w-3.5 h-3.5 text-brand-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+        <!-- Commute Settings Button -->
+        <button onclick="toggleSettingsModal(true)" class="w-9 h-9 rounded-full bg-surface hover:bg-surfaceHover border-2 border-slateGray-border flex items-center justify-center text-charcoal transition active:scale-95" title="設定分區與關注走廊">
+          <svg class="w-4 h-4 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <span>加路線</span>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- Main App Container (Direct Cards View) -->
-  <main class="max-w-md mx-auto w-full px-5 pt-3 pb-32 flex-1 flex flex-col">
+  <!-- Main App Canvas Container -->
+  <main class="max-w-md mx-auto w-full px-6 pt-5 pb-36 flex-1 flex flex-col space-y-5">
     
-    <!-- Monitored Cards Container (Direct Flow) -->
-    <div id="multiBusCardsContainer" class="space-y-3 flex-1">
-      <!-- Dynamic Live Cards -->
+    <!-- SECTION 1: Commute Decision Card -->
+    <div id="commuteDecisionCard" class="bg-surface rounded-4xl p-6 transition-all relative overflow-hidden">
+      <!-- Top Line: Overall Advice Badge -->
+      <div class="flex items-center mb-3.5">
+        <span id="decisionModeBadge" class="text-[11px] px-3 py-1 rounded-full font-bold bg-lavender text-white">
+          今日上班決策
+        </span>
+      </div>
+
+      <!-- Primary Decision Headline & Subtitle -->
+      <div class="mb-4">
+        <h2 id="commutePrimaryHeadline" class="text-lg font-black tracking-tight text-charcoal-heading flex items-center gap-2">
+          <span id="commuteStatusIcon" class="w-2.5 h-2.5 rounded-full bg-emeraldAccent inline-block shrink-0"></span>
+          <span id="commuteStatusText">交通暢順 · 準時出門即可</span>
+        </h2>
+        <p id="commuteDetailAdvice" class="text-xs text-slateGray font-normal mt-1.5 leading-relaxed">
+          天氣良好，各主要幹道行車速度理想，沿途未有特別封路或改道。
+        </p>
+      </div>
+
+      <!-- 3 Key Decision Badges -->
+      <div class="grid grid-cols-3 gap-2.5 pt-3.5 border-t border-slateGray-border/50">
+        <!-- Umbrella Indicator -->
+        <div class="bg-app rounded-2xl p-3 text-center transition">
+          <div class="w-8 h-8 rounded-full bg-lavender-light text-lavender mx-auto flex items-center justify-center mb-1">
+            <svg class="w-4 h-4 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16a2 2 0 102 2v-4m-2 0a9 9 0 01-9-9 9 9 0 0118 0 9 9 0 01-9 9z" />
+            </svg>
+          </div>
+          <div class="text-[10px] text-slateGray font-semibold">帶遮指數</div>
+          <div id="umbrellaStatusText" class="text-xs font-bold text-emeraldAccent mt-0.5">毋須帶遮</div>
+        </div>
+
+        <!-- Temperature & Outfit -->
+        <div class="bg-app rounded-2xl p-3 text-center transition">
+          <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center mb-1">
+            <svg class="w-4 h-4 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <div class="text-[10px] text-slateGray font-semibold" id="tempLabelText">出門氣溫</div>
+          <div id="tempDiffText" class="text-xs font-bold text-charcoal mt-0.5">29°C (+1°C)</div>
+        </div>
+
+        <!-- Traffic Corridor Speed -->
+        <div class="bg-app rounded-2xl p-3 text-center transition">
+          <div class="w-8 h-8 rounded-full bg-emerald-50 text-emeraldAccent mx-auto flex items-center justify-center mb-1">
+            <svg class="w-4 h-4 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10M13 8h4l3 3v5h-2m-8 0H9" />
+            </svg>
+          </div>
+          <div class="text-[10px] text-slateGray font-semibold">幹道路況</div>
+          <div id="trafficOverallSpeed" class="text-xs font-bold text-emeraldAccent mt-0.5">幹道暢順</div>
+        </div>
+      </div>
+
+      <!-- Active Weather Warnings Banner -->
+      <div id="weatherWarningBanner" class="hidden mt-3.5 pt-3 border-t border-slateGray-border/50 text-xs font-bold text-amber-700 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-amberAccent pulse-soft shrink-0"></span>
+        <span id="weatherWarningText" class="truncate">天文台正發出天氣警告</span>
+      </div>
+
+      <!-- Special Traffic News Banner -->
+      <div id="trafficNewsBanner" class="hidden mt-2 pt-2 border-t border-slateGray-border/50 text-xs font-bold text-rose-700 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-roseAccent pulse-soft shrink-0"></span>
+        <span id="trafficNewsText" class="truncate">運輸署特別交通消息：注意改道</span>
+      </div>
     </div>
 
-    <!-- Minimalist Dashed Add Prompt -->
-    <button onclick="toggleSearchModal(true)" class="w-full mt-3 py-3.5 border-2 border-dashed border-gray-200 hover:border-brand-orange/50 rounded-3xl text-brand-gray hover:text-brand-orange text-xs font-extrabold flex items-center justify-center space-x-2 transition-all bg-white/40 active:scale-[0.99]">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+    <!-- SECTION 2: Dual-Zone Weather Comparison -->
+    <div class="bg-surface rounded-4xl p-6">
+      <div class="flex items-center justify-between mb-4 px-1">
+        <div class="flex items-center space-x-2">
+          <div class="w-7 h-7 rounded-full bg-lavender-light text-lavender flex items-center justify-center">
+            <svg class="w-4 h-4 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z" />
+            </svg>
+          </div>
+          <h3 class="text-xs font-black text-charcoal-heading uppercase tracking-wider">分區天氣及雨量對比</h3>
+        </div>
+        <button onclick="toggleSettingsModal(true)" class="text-[11px] font-bold text-lavender hover:text-lavender-hover transition">
+          自訂分區
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Origin Weather Card -->
+        <div class="p-4 bg-app rounded-3xl transition flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-bold text-slateGray flex items-center gap-1">
+              <span id="originRoleIcon">🏠 出發地</span>
+              <strong id="homeDistrictLabel" class="text-charcoal font-black">元朗</strong>
+            </span>
+            <span class="w-6 h-6 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center text-xs">☀️</span>
+          </div>
+          <div class="flex items-baseline space-x-1 my-1">
+            <span id="homeTemp" class="text-3xl font-black text-charcoal-heading tracking-tight">28</span>
+            <span class="text-xs font-bold text-slateGray">°C</span>
+          </div>
+          <div class="flex items-center justify-between mt-2 pt-2 border-t border-slateGray-border/40 text-[10px] font-semibold text-slateGray">
+            <span>雨量: <strong id="homeRain" class="text-charcoal">0 mm</strong></span>
+            <span>濕度: <strong id="homeHumidity" class="text-charcoal">75%</strong></span>
+          </div>
+        </div>
+
+        <!-- Destination Weather Card -->
+        <div class="p-4 bg-app rounded-3xl transition flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-bold text-slateGray flex items-center gap-1">
+              <span id="destRoleIcon">🏢 目的地</span>
+              <strong id="workDistrictLabel" class="text-charcoal font-black">中環</strong>
+            </span>
+            <span class="w-6 h-6 rounded-full bg-sky-50 text-sky-500 flex items-center justify-center text-xs">🌤️</span>
+          </div>
+          <div class="flex items-baseline space-x-1 my-1">
+            <span id="workTemp" class="text-3xl font-black text-charcoal-heading tracking-tight">29</span>
+            <span class="text-xs font-bold text-slateGray">°C</span>
+          </div>
+          <div class="flex items-center justify-between mt-2 pt-2 border-t border-slateGray-border/40 text-[10px] font-semibold text-slateGray">
+            <span>雨量: <strong id="workRain" class="text-charcoal">0 mm</strong></span>
+            <span>紫外線: <strong id="uvIndexVal" class="text-charcoal">6</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: Traffic Speed Corridor Grid -->
+    <div class="bg-surface rounded-4xl p-6">
+      <div class="flex items-center justify-between mb-3 px-1">
+        <div class="flex items-center space-x-2">
+          <div class="w-7 h-7 rounded-full bg-lavender-light text-lavender flex items-center justify-center">
+            <svg class="w-4 h-4 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <h3 class="text-xs font-black text-charcoal-heading uppercase tracking-wider">幹道及過海隧道行車速度</h3>
+        </div>
+        <span class="text-[10px] font-semibold text-slateGray">運輸署實時</span>
+      </div>
+
+      <!-- Road Segment Speed Cards -->
+      <div id="trafficSpeedGrid" class="grid grid-cols-2 gap-2.5">
+        <!-- Injected via JS -->
+      </div>
+    </div>
+
+    <!-- SECTION 4: Transit ETA Board -->
+    <div class="flex items-center justify-between pt-2 px-1">
+      <div class="flex items-center space-x-2">
+        <div class="w-7 h-7 rounded-full bg-lavender-light text-lavender flex items-center justify-center">
+          <svg class="w-4 h-4 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+        </div>
+        <h3 class="text-xs font-black text-charcoal-heading uppercase tracking-wider">我的常搭出門班次</h3>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="toggleBookmarksModal(true)" class="px-3 py-1.5 rounded-full bg-surface hover:bg-surfaceHover border-2 border-slateGray-border flex items-center gap-1 text-xs font-bold text-charcoal transition active:scale-95">
+          <span class="text-amber-500">⭐</span> 收藏
+        </button>
+        <button onclick="toggleSearchModal(true)" class="px-3.5 py-1.5 rounded-full bg-lavender hover:bg-lavender-hover text-white flex items-center gap-1 text-xs font-bold transition active:scale-95">
+          <span>＋ 加路線</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Monitored Cards Container -->
+    <div id="multiBusCardsContainer" class="space-y-3.5">
+      <!-- Dynamic Live Connected Timeline Cards -->
+    </div>
+
+    <!-- Minimalist Dashed Add Button -->
+    <button onclick="toggleSearchModal(true)" class="w-full py-4 border-2 border-dashed border-slateGray-border hover:border-lavender rounded-4xl text-slateGray hover:text-lavender text-xs font-bold flex items-center justify-center space-x-2 transition-all bg-surface/50 active:scale-[0.99]">
+      <svg class="w-4 h-4 stroke-current" fill="none" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
       </svg>
-      <span>新增港鐵站、北大嶼山巴士或市區路線到看板</span>
+      <span>新增港鐵站、九巴/龍運、嶼巴或城巴至看板</span>
     </button>
 
   </main>
 
-  <!-- Bottom Floating Refresh Button with Cat Paw Icon (🐾) -->
-  <div class="fixed bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-canvas via-canvas/90 to-transparent pointer-events-none flex justify-center z-40">
-    <button onclick="refreshAllBusesETA()" id="refreshBtn" class="pointer-events-auto w-full max-w-md bg-brand-orange hover:bg-brand-orangeHover text-white font-bold py-4 px-6 rounded-2xl shadow-btn flex items-center justify-center space-x-2.5 active:scale-[0.98] transition-all">
+  <!-- Bottom Floating Refresh Pill Button -->
+  <div class="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none flex justify-center z-40">
+    <button onclick="refreshAllCommuteData()" id="refreshBtn" class="pointer-events-auto w-full max-w-md bg-lavender hover:bg-lavender-hover text-white font-bold py-3.5 px-6 rounded-full flex items-center justify-center space-x-2.5 active:scale-[0.98] transition-all">
       <svg id="refreshPawIcon" class="w-5 h-5 transition-transform duration-300 fill-current" viewBox="0 0 24 24">
         <path d="M12 11.5c-2.4 0-4.5 1.8-4.5 4.3 0 2.2 2 3.7 4.5 3.7s4.5-1.5 4.5-3.7c0-2.5-2.1-4.3-4.5-4.3z" />
         <circle cx="6.5" cy="10.5" r="1.8" />
@@ -135,167 +330,200 @@
         <circle cx="14" cy="7.2" r="1.8" />
         <circle cx="17.5" cy="10.5" r="1.8" />
       </svg>
-      <span class="text-sm font-bold tracking-wide">即時全部重新整理</span>
+      <span class="text-sm font-bold tracking-wide">一鍵同步出門全能情報</span>
     </button>
   </div>
 
-  <!-- MODAL 1: Bookmarks Sheet (⭐ 我的收藏) -->
-  <div id="bookmarksModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end justify-center transition-opacity duration-300">
-    <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 pb-10 shadow-2xl max-h-[85vh] flex flex-col">
-      <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4"></div>
+  <!-- MODAL 1: Commute Settings Sheet -->
+  <div id="settingsModal" class="fixed inset-0 bg-charcoal/30 backdrop-blur-sm z-50 hidden flex items-end justify-center transition-opacity duration-300">
+    <div class="bg-white w-full max-w-md rounded-t-[36px] p-6 pb-10 max-h-[90vh] flex flex-col">
+      <div class="w-12 h-1.5 bg-slateGray-border rounded-full mx-auto mb-4"></div>
       
-      <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-base font-black text-charcoal-heading">出門全能設定</h3>
+          <p class="text-xs text-slateGray font-medium">自訂屋企與公司分區以計算即時天氣與路況</p>
+        </div>
+        <button onclick="toggleSettingsModal(false)" class="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-slateGray font-bold hover:text-charcoal text-xs">✕</button>
+      </div>
+
+      <div class="space-y-4 overflow-y-auto max-h-[65vh] hide-scrollbar p-1">
+        <!-- Home District Select -->
+        <div>
+          <label class="block text-xs font-bold text-charcoal mb-1.5">🏠 屋企所在分區</label>
+          <select id="settingHomeDistrict" class="w-full bg-surface border-2 border-slateGray-border rounded-2xl p-3 text-sm font-bold text-charcoal focus:outline-none focus:border-lavender">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+
+        <!-- Work District Select -->
+        <div>
+          <label class="block text-xs font-bold text-charcoal mb-1.5">🏢 公司/工作地點分區</label>
+          <select id="settingWorkDistrict" class="w-full bg-surface border-2 border-slateGray-border rounded-2xl p-3 text-sm font-bold text-charcoal focus:outline-none focus:border-lavender">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+
+        <!-- Traffic Corridor Presets -->
+        <div>
+          <label class="block text-xs font-bold text-charcoal mb-1.5">🚗 重點監控幹道 / 隧道走廊</label>
+          <div class="grid grid-cols-2 gap-2 text-xs font-bold" id="trafficCorridorCheckboxes">
+            <!-- Dynamic checkboxes -->
+          </div>
+        </div>
+
+        <button onclick="saveCommuteSettings()" class="w-full bg-lavender hover:bg-lavender-hover text-white font-bold py-3.5 rounded-full text-sm active:scale-[0.98] transition mt-2">
+          儲存設定並同步看板
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Bookmarks Sheet -->
+  <div id="bookmarksModal" class="fixed inset-0 bg-charcoal/30 backdrop-blur-sm z-50 hidden flex items-end justify-center transition-opacity duration-300">
+    <div class="bg-white w-full max-w-md rounded-t-[36px] p-6 pb-10 max-h-[85vh] flex flex-col">
+      <div class="w-12 h-1.5 bg-slateGray-border rounded-full mx-auto mb-4"></div>
+      
+      <div class="flex items-center justify-between mb-4">
         <div class="flex items-center space-x-2">
           <span class="text-base">⭐</span>
-          <h3 class="text-lg font-extrabold text-brand-dark">常用路線收藏庫</h3>
+          <h3 class="text-base font-black text-charcoal-heading">常用路線收藏庫</h3>
         </div>
         <div class="flex items-center space-x-3">
-          <button onclick="resetToDefaultBuses()" class="text-[11px] text-brand-orange font-bold hover:underline">
+          <button onclick="resetToDefaultBuses()" class="text-xs text-lavender font-bold hover:underline">
             重設預設
           </button>
-          <button onclick="toggleBookmarksModal(false)" class="text-xs text-brand-gray font-bold p-1">關閉</button>
+          <button onclick="toggleBookmarksModal(false)" class="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-slateGray font-bold hover:text-charcoal text-xs">✕</button>
         </div>
       </div>
 
-      <div id="bookmarksListContainer" class="space-y-2 overflow-y-auto max-h-[60vh] hide-scrollbar p-0.5">
+      <div id="bookmarksListContainer" class="space-y-2.5 overflow-y-auto max-h-[60vh] hide-scrollbar p-0.5">
         <!-- Dynamically Injected Bookmarks -->
       </div>
     </div>
   </div>
 
-  <!-- MODAL 2: Route Stops Explorer Sheet (路線各站一覽) -->
-  <div id="stopsModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end justify-center transition-opacity duration-300">
-    <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 pb-10 shadow-2xl max-h-[88vh] flex flex-col">
-      <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4"></div>
+  <!-- MODAL 3: Route Stops Explorer Sheet -->
+  <div id="stopsModal" class="fixed inset-0 bg-charcoal/30 backdrop-blur-sm z-50 hidden flex items-end justify-center transition-opacity duration-300">
+    <div class="bg-white w-full max-w-md rounded-t-[36px] p-6 pb-10 max-h-[88vh] flex flex-col">
+      <div class="w-12 h-1.5 bg-slateGray-border rounded-full mx-auto mb-4"></div>
       
-      <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center justify-between mb-4">
         <div>
-          <h3 class="text-base font-extrabold text-brand-dark" id="stopsModalTitle">路線站表</h3>
-          <p class="text-xs text-brand-gray" id="stopsModalSubtitle">點擊車站即可加入看板</p>
+          <h3 class="text-base font-black text-charcoal-heading" id="stopsModalTitle">路線站表</h3>
+          <p class="text-xs text-slateGray font-medium" id="stopsModalSubtitle">點擊車站即可加入看板</p>
         </div>
         <div class="flex items-center space-x-2">
-          <button onclick="reverseDirectionInModal()" class="text-xs font-bold text-brand-orange flex items-center space-x-1 hover:opacity-80 transition bg-orange-50 px-2.5 py-1.5 rounded-xl">
+          <button onclick="reverseDirectionInModal()" class="text-xs font-bold text-lavender border-2 border-lavender/30 flex items-center space-x-1 hover:bg-lavender-light transition px-3 py-1.5 rounded-full">
             <span>⇄ 切換方向</span>
           </button>
-          <button onclick="toggleStopsModal(false)" class="text-xs text-brand-gray font-bold p-1">關閉</button>
+          <button onclick="toggleStopsModal(false)" class="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-slateGray font-bold hover:text-charcoal text-xs">✕</button>
         </div>
       </div>
 
-      <div id="stopsModalListContainer" class="space-y-1.5 overflow-y-auto max-h-[60vh] hide-scrollbar p-0.5">
+      <div id="stopsModalListContainer" class="space-y-2 overflow-y-auto max-h-[60vh] hide-scrollbar p-0.5">
         <!-- Dynamically Injected Stops -->
       </div>
     </div>
   </div>
 
-  <!-- MODAL 3: Search Route Modal Sheet -->
-  <div id="searchModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end justify-center transition-opacity duration-300">
-    <div class="bg-white w-full max-w-md rounded-t-[32px] p-6 pb-10 shadow-2xl max-h-[90vh] flex flex-col">
-      <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4"></div>
+  <!-- MODAL 4: Search Route Modal Sheet -->
+  <div id="searchModal" class="fixed inset-0 bg-charcoal/30 backdrop-blur-sm z-50 hidden flex items-end justify-center transition-opacity duration-300">
+    <div class="bg-white w-full max-w-md rounded-t-[36px] p-6 pb-10 max-h-[90vh] flex flex-col">
+      <div class="w-12 h-1.5 bg-slateGray-border rounded-full mx-auto mb-4"></div>
       
-      <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center justify-between mb-4">
         <div>
-          <h3 class="text-lg font-extrabold text-brand-dark">加入監控路線</h3>
-          <p class="text-xs text-brand-gray">支援 嶼巴 · 港鐵 · 九巴/龍運 · 城巴</p>
+          <h3 class="text-base font-black text-charcoal-heading">加入監控路線</h3>
+          <p class="text-xs text-slateGray font-medium">支援 港鐵 · 九巴/龍運 · 嶼巴 · 城巴</p>
         </div>
-        <button onclick="toggleSearchModal(false)" class="text-sm text-brand-gray font-bold p-1">關閉</button>
+        <button onclick="toggleSearchModal(false)" class="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-slateGray font-bold hover:text-charcoal text-xs">✕</button>
       </div>
 
       <!-- Company Filter Selector -->
-      <div class="flex items-center space-x-1 mb-3 bg-canvas p-1 rounded-2xl overflow-x-auto hide-scrollbar">
-        <button onclick="setSearchCompany('ALL')" id="filterAll" class="flex-1 py-1.5 px-2 text-xs font-bold rounded-xl transition bg-white text-brand-dark shadow-sm shrink-0">
+      <div class="flex items-center space-x-1.5 mb-3 bg-surface p-1.5 rounded-full overflow-x-auto hide-scrollbar">
+        <button onclick="setSearchCompany('ALL')" id="filterAll" class="flex-1 py-1.5 px-3 text-xs font-bold rounded-full transition bg-white text-charcoal shrink-0">
           全部
         </button>
-        <button onclick="setSearchCompany('NLB')" id="filterNlb" class="flex-1 py-1.5 px-2 text-xs font-bold rounded-xl transition text-brand-gray shrink-0">
-          嶼巴 NLB
-        </button>
-        <button onclick="setSearchCompany('MTR')" id="filterMtr" class="flex-1 py-1.5 px-2 text-xs font-bold rounded-xl transition text-brand-gray shrink-0">
-          港鐵 MTR
-        </button>
-        <button onclick="setSearchCompany('KMB')" id="filterKmb" class="flex-1 py-1.5 px-2 text-xs font-bold rounded-xl transition text-brand-gray shrink-0">
+        <button onclick="setSearchCompany('KMB')" id="filterKmb" class="flex-1 py-1.5 px-3 text-xs font-bold rounded-full transition text-slateGray shrink-0">
           九巴/龍運
         </button>
-        <button onclick="setSearchCompany('CTB')" id="filterCtb" class="flex-1 py-1.5 px-2 text-xs font-bold rounded-xl transition text-brand-gray shrink-0">
+        <button onclick="setSearchCompany('MTR')" id="filterMtr" class="flex-1 py-1.5 px-3 text-xs font-bold rounded-full transition text-slateGray shrink-0">
+          港鐵 MTR
+        </button>
+        <button onclick="setSearchCompany('NLB')" id="filterNlb" class="flex-1 py-1.5 px-3 text-xs font-bold rounded-full transition text-slateGray shrink-0">
+          嶼巴 NLB
+        </button>
+        <button onclick="setSearchCompany('CTB')" id="filterCtb" class="flex-1 py-1.5 px-3 text-xs font-bold rounded-full transition text-slateGray shrink-0">
           城巴 CTB
         </button>
       </div>
 
       <!-- MTR Line Direct Selector -->
       <div id="mtrLinesQuickContainer" class="hidden mb-3">
-        <div class="text-[11px] font-bold text-brand-gray mb-1.5">選擇港鐵綫路：</div>
-        <div class="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto hide-scrollbar p-0.5">
-          <button onclick="selectMtrLine('TCL')" class="p-2.5 rounded-xl text-left font-bold text-xs bg-orange-50 text-[#E07A20] border border-orange-200 flex items-center justify-between hover:opacity-90">
+        <div class="text-[11px] font-bold text-slateGray mb-1.5">選擇港鐵綫路：</div>
+        <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto hide-scrollbar p-0.5">
+          <button onclick="selectMtrLine('TCL')" class="p-2.5 rounded-2xl text-left font-bold text-xs bg-surface text-charcoal border border-slateGray-border flex items-center justify-between hover:bg-surfaceHover">
             <span>東涌綫 TCL</span>
-            <span class="text-[10px] opacity-70">香港 ⇄ 東涌</span>
+            <span class="text-[10px] text-slateGray">香港 ⇄ 東涌</span>
           </button>
-          <button onclick="selectMtrLine('TML')" class="p-2.5 rounded-xl text-left font-bold text-xs bg-amber-50 text-[#923011] border border-amber-200 flex items-center justify-between hover:opacity-90">
+          <button onclick="selectMtrLine('TML')" class="p-2.5 rounded-2xl text-left font-bold text-xs bg-surface text-charcoal border border-slateGray-border flex items-center justify-between hover:bg-surfaceHover">
             <span>屯馬綫 TML</span>
-            <span class="text-[10px] opacity-70">屯門 ⇄ 烏溪沙</span>
+            <span class="text-[10px] text-slateGray">屯門 ⇄ 烏溪沙</span>
           </button>
-          <button onclick="selectMtrLine('AEL')" class="p-2.5 rounded-xl text-left font-bold text-xs bg-teal-50 text-[#00888A] border border-teal-200 flex items-center justify-between hover:opacity-90">
+          <button onclick="selectMtrLine('AEL')" class="p-2.5 rounded-2xl text-left font-bold text-xs bg-surface text-charcoal border border-slateGray-border flex items-center justify-between hover:bg-surfaceHover">
             <span>機場快綫 AEL</span>
-            <span class="text-[10px] opacity-70">香港 ⇄ 博覽館</span>
+            <span class="text-[10px] text-slateGray">香港 ⇄ 博覽館</span>
           </button>
-          <button onclick="selectMtrLine('EAL')" class="p-2.5 rounded-xl text-left font-bold text-xs bg-sky-50 text-[#007EA7] border border-sky-200 flex items-center justify-between hover:opacity-90">
+          <button onclick="selectMtrLine('EAL')" class="p-2.5 rounded-2xl text-left font-bold text-xs bg-surface text-charcoal border border-slateGray-border flex items-center justify-between hover:bg-surfaceHover">
             <span>東鐵綫 EAL</span>
-            <span class="text-[10px] opacity-70">金鐘 ⇄ 羅湖/落馬洲</span>
+            <span class="text-[10px] text-slateGray">金鐘 ⇄ 羅湖</span>
           </button>
-          <button onclick="selectMtrLine('TWL')" class="p-2.5 rounded-xl text-left font-bold text-xs bg-red-50 text-[#ED1D24] border border-red-200 flex items-center justify-between hover:opacity-90">
+          <button onclick="selectMtrLine('TWL')" class="p-2.5 rounded-2xl text-left font-bold text-xs bg-surface text-charcoal border border-slateGray-border flex items-center justify-between hover:bg-surfaceHover">
             <span>荃灣綫 TWL</span>
-            <span class="text-[10px] opacity-70">中環 ⇄ 荃灣</span>
+            <span class="text-[10px] text-slateGray">中環 ⇄ 荃灣</span>
           </button>
-          <button onclick="selectMtrLine('ISL')" class="p-2.5 rounded-xl text-left font-bold text-xs bg-blue-50 text-[#007DC5] border border-blue-200 flex items-center justify-between hover:opacity-90">
+          <button onclick="selectMtrLine('ISL')" class="p-2.5 rounded-2xl text-left font-bold text-xs bg-surface text-charcoal border border-slateGray-border flex items-center justify-between hover:bg-surfaceHover">
             <span>港島綫 ISL</span>
-            <span class="text-[10px] opacity-70">堅尼地城 ⇄ 柴灣</span>
+            <span class="text-[10px] text-slateGray">堅尼地城 ⇄ 柴灣</span>
           </button>
-          <button onclick="selectMtrLine('KTL')" class="p-2.5 rounded-xl text-left font-bold text-xs bg-emerald-50 text-[#00873E] border border-emerald-200 flex items-center justify-between hover:opacity-90">
+          <button onclick="selectMtrLine('KTL')" class="p-2.5 rounded-2xl text-left font-bold text-xs bg-surface text-charcoal border border-slateGray-border flex items-center justify-between hover:bg-surfaceHover">
             <span>觀塘綫 KTL</span>
-            <span class="text-[10px] opacity-70">黃埔 ⇄ 調景嶺</span>
+            <span class="text-[10px] text-slateGray">黃埔 ⇄ 調景嶺</span>
           </button>
-          <button onclick="selectMtrLine('TKL')" class="p-2.5 rounded-xl text-left font-bold text-xs bg-purple-50 text-[#7D499D] border border-purple-200 flex items-center justify-between hover:opacity-90">
+          <button onclick="selectMtrLine('TKL')" class="p-2.5 rounded-2xl text-left font-bold text-xs bg-surface text-charcoal border border-slateGray-border flex items-center justify-between hover:bg-surfaceHover">
             <span>將軍澳綫 TKL</span>
-            <span class="text-[10px] opacity-70">北角 ⇄ 寶琳/康城</span>
-          </button>
-          <button onclick="selectMtrLine('SIL')" class="p-2.5 rounded-xl text-left font-bold text-xs bg-lime-50 text-[#6B750A] border border-lime-200 flex items-center justify-between hover:opacity-90">
-            <span>南港島綫 SIL</span>
-            <span class="text-[10px] opacity-70">金鐘 ⇄ 海怡半島</span>
-          </button>
-          <button onclick="selectMtrLine('DRL')" class="p-2.5 rounded-xl text-left font-bold text-xs bg-pink-50 text-[#B84E85] border border-pink-200 flex items-center justify-between hover:opacity-90">
-            <span>迪士尼綫 DRL</span>
-            <span class="text-[10px] opacity-70">欣澳 ⇄ 迪士尼</span>
+            <span class="text-[10px] text-slateGray">北角 ⇄ 寶琳</span>
           </button>
         </div>
       </div>
 
-      <!-- Search Input -->
+      <!-- Search Input Box -->
       <div id="searchBoxContainer" class="relative mb-2">
-        <input id="searchInput" type="text" placeholder="輸入路線 (如 276P, 37M, 38, B6, S1, E36, 968, 屯馬綫)..." 
+        <input id="searchInput" type="text" placeholder="輸入路線 (如 276P, 968, E36, 37M, 38, B6, 屯馬綫)..." 
                oninput="handleSearchInputDebounce()"
-               class="w-full bg-canvas py-3.5 pl-11 pr-4 rounded-2xl text-sm font-bold text-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-orange/40 uppercase">
-        <svg class="w-5 h-5 text-brand-gray absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+               class="w-full bg-surface py-3.5 pl-11 pr-4 rounded-2xl text-sm font-bold text-charcoal placeholder-slateGray focus:outline-none focus:ring-2 focus:ring-lavender/30 uppercase border-none">
+        <svg class="w-5 h-5 text-slateGray absolute left-3.5 top-3.5 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
       </div>
 
       <!-- Search Suggestions -->
-      <div id="searchSuggestionsContainer" class="hidden max-h-48 overflow-y-auto hide-scrollbar space-y-1.5 mb-2 p-1 bg-gray-50 rounded-2xl border border-gray-100">
+      <div id="searchSuggestionsContainer" class="hidden max-h-48 overflow-y-auto hide-scrollbar space-y-2 mb-3 p-1 bg-surface rounded-2xl">
       </div>
 
       <!-- Quick Chips -->
-      <div id="quickChipsContainer" class="flex items-center space-x-1.5 overflow-x-auto hide-scrollbar mb-3 py-1">
-        <span class="text-[11px] font-bold text-brand-gray shrink-0">熱門路線:</span>
-        <button onclick="quickSearch('276P', 'KMB')" class="px-2.5 py-1 rounded-xl bg-red-50 text-red-600 text-xs font-bold shrink-0">276P (天水圍/上水)</button>
-        <button onclick="quickSearch('37M', 'NLB')" class="px-2.5 py-1 rounded-xl bg-teal-50 text-teal-700 text-xs font-bold shrink-0">37M (迎東/東涌)</button>
-        <button onclick="quickSearch('38', 'NLB')" class="px-2.5 py-1 rounded-xl bg-teal-50 text-teal-700 text-xs font-bold shrink-0">38 (逸東/東涌)</button>
-        <button onclick="quickSearch('B6', 'NLB')" class="px-2.5 py-1 rounded-xl bg-teal-50 text-teal-700 text-xs font-bold shrink-0">B6 (大橋香港口岸)</button>
-        <button onclick="quickSearch('S1', 'CTB')" class="px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 text-xs font-bold shrink-0">S1 (東涌/機場)</button>
-        <button onclick="quickSearch('E36', 'KMB')" class="px-2.5 py-1 rounded-xl bg-red-50 text-red-600 text-xs font-bold shrink-0">E36 (元朗/機場)</button>
-        <button onclick="selectMtrLine('TCL')" class="px-2.5 py-1 rounded-xl bg-orange-50 text-[#E07A20] text-xs font-bold shrink-0">東涌綫</button>
-        <button onclick="selectMtrLine('TML')" class="px-2.5 py-1 rounded-xl bg-amber-50 text-[#923011] text-xs font-bold shrink-0">屯馬綫</button>
-        <button onclick="quickSearch('B1', 'KMB')" class="px-2.5 py-1 rounded-xl bg-red-50 text-red-600 text-xs font-bold shrink-0">B1 (天水圍/落馬洲)</button>
-        <button onclick="quickSearch('968', 'KMB')" class="px-2.5 py-1 rounded-xl bg-red-50 text-red-600 text-xs font-bold shrink-0">968 (元朗/銅鑼灣)</button>
+      <div id="quickChipsContainer" class="flex items-center space-x-2 overflow-x-auto hide-scrollbar mb-4 py-1">
+        <span class="text-[11px] font-bold text-slateGray shrink-0">熱門:</span>
+        <button onclick="quickSearch('276P', 'KMB')" class="px-3 py-1 rounded-full bg-surface hover:bg-surfaceHover text-charcoal text-xs font-bold shrink-0 border border-slateGray-border">276P (天水圍/上水)</button>
+        <button onclick="quickSearch('968', 'KMB')" class="px-3 py-1 rounded-full bg-surface hover:bg-surfaceHover text-charcoal text-xs font-bold shrink-0 border border-slateGray-border">968 (元朗/銅鑼灣)</button>
+        <button onclick="quickSearch('E36', 'KMB')" class="px-3 py-1 rounded-full bg-surface hover:bg-surfaceHover text-charcoal text-xs font-bold shrink-0 border border-slateGray-border">E36 (元朗/機場)</button>
+        <button onclick="quickSearch('37M', 'NLB')" class="px-3 py-1 rounded-full bg-surface hover:bg-surfaceHover text-charcoal text-xs font-bold shrink-0 border border-slateGray-border">37M (迎東/東涌)</button>
+        <button onclick="quickSearch('38', 'NLB')" class="px-3 py-1 rounded-full bg-surface hover:bg-surfaceHover text-charcoal text-xs font-bold shrink-0 border border-slateGray-border">38 (逸東/東涌)</button>
+        <button onclick="selectMtrLine('TML')" class="px-3 py-1 rounded-full bg-surface hover:bg-surfaceHover text-charcoal text-xs font-bold shrink-0 border border-slateGray-border">屯馬綫</button>
       </div>
 
-      <button onclick="handleSearchRouteSubmit()" class="w-full bg-brand-dark text-white font-bold py-3.5 rounded-2xl text-sm active:scale-[0.98] transition shadow-md">
+      <button onclick="handleSearchRouteSubmit()" class="w-full bg-lavender hover:bg-lavender-hover text-white font-bold py-3.5 rounded-full text-sm active:scale-[0.98] transition">
         搜尋分站並加入看板
       </button>
     </div>
@@ -303,17 +531,67 @@
 
   <script>
     // =========================================================================
-    // Core Global State & Config (MTR + NLB + KMB/LWB + CTB)
+    // Core State & Disticts / Traffic Config
     // =========================================================================
-    
+
+    const HKO_DISTRICTS = [
+      { id: '元朗公園', name: '元朗', region: '新界西' },
+      { id: '屯門', name: '屯門', region: '新界西' },
+      { id: '東涌', name: '東涌/大嶼山', region: '離島' },
+      { id: '沙田', name: '沙田', region: '新界東' },
+      { id: '大埔', name: '大埔', region: '新界東' },
+      { id: '上水', name: '上水/北區', region: '新界東' },
+      { id: '將軍澳', name: '將軍澳', region: '九龍東' },
+      { id: '觀塘', name: '觀塘', region: '九龍東' },
+      { id: '九龍城', name: '九龍城', region: '九龍中' },
+      { id: '黃大仙', name: '黃大仙', region: '九龍中' },
+      { id: '深水埗', name: '深水埗', region: '九龍西' },
+      { id: '油麻地', name: '油尖旺', region: '九龍西' },
+      { id: '香港天文台', name: '尖沙咀/九龍', region: '九龍' },
+      { id: '中環', name: '中西區/中環', region: '港島' },
+      { id: '跑馬地', name: '灣仔/銅鑼灣', region: '港島' },
+      { id: '筲箕灣', name: '東區/鰂魚涌', region: '港島' },
+      { id: '黃竹坑', name: '南區/黃竹坑', region: '港島' },
+      { id: '赤鱲角', name: '機場/赤鱲角', region: '離島' },
+      { id: '荃灣城門谷', name: '荃灣', region: '新界西' },
+      { id: '青衣', name: '葵青/青衣', region: '新界西' }
+    ];
+
+    const TRAFFIC_CORRIDORS = [
+      { id: 'CHT', name: '紅磡海底隧道 (紅隧)', normalSpeed: 45, region: 'Harbour' },
+      { id: 'EHC', name: '東區海底隧道 (東隧)', normalSpeed: 55, region: 'Harbour' },
+      { id: 'WHC', name: '西區海底隧道 (西隧)', normalSpeed: 65, region: 'Harbour' },
+      { id: 'TMR', name: '屯門公路 (往九龍/市區)', normalSpeed: 70, region: 'NT' },
+      { id: 'TOLO', name: '吐露港公路 (往沙田/九龍)', normalSpeed: 75, region: 'NT' },
+      { id: 'LION', name: '獅子山隧道', normalSpeed: 50, region: 'Kowloon' },
+      { id: 'TATE', name: '大老山隧道', normalSpeed: 60, region: 'Kowloon' },
+      { id: 'R3', name: '三號幹線 / 大欖隧道', normalSpeed: 80, region: 'NT' },
+      { id: 'R8', name: '八號幹線 (青沙公路 / 尖山隧道)', normalSpeed: 80, region: 'NT' },
+      { id: 'R8_LANT', name: '八號幹線 (青嶼幹線 / 北大嶼山公路)', normalSpeed: 90, region: 'NT' },
+      { id: 'R9_YL', name: '九號幹線 (元朗公路 / 新田公路)', normalSpeed: 80, region: 'NT' },
+      { id: 'R9_FL', name: '九號幹線 (粉嶺公路)', normalSpeed: 85, region: 'NT' }
+    ];
+
+    // =========================================================================
+    // Smart Auto-Mode Logic (04:00-13:59 上班, 14:00-03:59 放工)
+    // =========================================================================
+    function getSmartExpectedMode() {
+      const currentHour = new Date().getHours();
+      return (currentHour >= 4 && currentHour < 14) ? 'morning' : 'evening';
+    }
+
+    // Commute User Settings
+    let userCommuteSettings = JSON.parse(localStorage.getItem('hk_commute_settings_v1')) || {
+      homeDistrict: '元朗公園',
+      workDistrict: '中環',
+      monitoredCorridors: ['CHT', 'WHC', 'TMR', 'R3'],
+      mode: getSmartExpectedMode()
+    };
+
     const MTR_LINES = {
       TCL: {
         code: 'TCL',
         name: '東涌綫',
-        color: '#E07A20',
-        pillBg: 'bg-orange-50',
-        pillText: 'text-[#E07A20]',
-        pillBorder: 'border-orange-200',
         upDest: '東涌',
         downDest: '香港',
         stations: ['HOK', 'KOW', 'OLY', 'NAC', 'LAK', 'TSY', 'SUN', 'TUC']
@@ -321,10 +599,6 @@
       TML: {
         code: 'TML',
         name: '屯馬綫',
-        color: '#923011',
-        pillBg: 'bg-amber-50',
-        pillText: 'text-[#923011]',
-        pillBorder: 'border-amber-200',
         upDest: '屯門',
         downDest: '烏溪沙',
         stations: ['WKS', 'MOS', 'HEO', 'TSH', 'SHM', 'CIO', 'STW', 'CKT', 'TAW', 'HIK', 'DIH', 'KAT', 'SUW', 'TKW', 'HOM', 'HUH', 'ETS', 'AUS', 'NAC', 'MEF', 'TWW', 'KSR', 'YUL', 'LOP', 'TIS', 'SIH', 'TUM']
@@ -332,10 +606,6 @@
       AEL: {
         code: 'AEL',
         name: '機場快綫',
-        color: '#00888A',
-        pillBg: 'bg-teal-50',
-        pillText: 'text-[#00888A]',
-        pillBorder: 'border-teal-200',
         upDest: '博覽館',
         downDest: '香港',
         stations: ['HOK', 'KOW', 'TSY', 'AIR', 'AWE']
@@ -343,10 +613,6 @@
       EAL: {
         code: 'EAL',
         name: '東鐵綫',
-        color: '#007EA7',
-        pillBg: 'bg-sky-50',
-        pillText: 'text-[#007EA7]',
-        pillBorder: 'border-sky-200',
         upDest: '羅湖 / 落馬洲',
         downDest: '金鐘',
         stations: ['ADM', 'EXC', 'HUH', 'MKK', 'KOT', 'TAW', 'SHT', 'FOT', 'RAC', 'UNI', 'TAP', 'TWO', 'FAN', 'SHS', 'LOW', 'LMC']
@@ -354,10 +620,6 @@
       TWL: {
         code: 'TWL',
         name: '荃灣綫',
-        color: '#ED1D24',
-        pillBg: 'bg-red-50',
-        pillText: 'text-[#ED1D24]',
-        pillBorder: 'border-red-200',
         upDest: '荃灣',
         downDest: '中環',
         stations: ['CEN', 'ADM', 'TST', 'JOR', 'YMT', 'MKG', 'PRE', 'SSP', 'CSW', 'LCK', 'MEF', 'LAK', 'KWF', 'KWH', 'TWH', 'TSW']
@@ -365,10 +627,6 @@
       ISL: {
         code: 'ISL',
         name: '港島綫',
-        color: '#007DC5',
-        pillBg: 'bg-blue-50',
-        pillText: 'text-[#007DC5]',
-        pillBorder: 'border-blue-200',
         upDest: '柴灣',
         downDest: '堅尼地城',
         stations: ['KET', 'HKU', 'SYP', 'SHW', 'CEN', 'ADM', 'WAC', 'CAB', 'TIH', 'FOH', 'NOP', 'QUB', 'TAK', 'SWH', 'SKW', 'HFC', 'CHW']
@@ -376,10 +634,6 @@
       KTL: {
         code: 'KTL',
         name: '觀塘綫',
-        color: '#00873E',
-        pillBg: 'bg-emerald-50',
-        pillText: 'text-[#00873E]',
-        pillBorder: 'border-emerald-200',
         upDest: '調景嶺',
         downDest: '黃埔',
         stations: ['WHA', 'HOM', 'YMT', 'MKG', 'PRE', 'SKM', 'KOT', 'LOF', 'WTS', 'DIH', 'CHH', 'KOB', 'NTK', 'KWT', 'LAT', 'YAT', 'TIK']
@@ -387,10 +641,6 @@
       TKL: {
         code: 'TKL',
         name: '將軍澳綫',
-        color: '#7D499D',
-        pillBg: 'bg-purple-50',
-        pillText: 'text-[#7D499D]',
-        pillBorder: 'border-purple-200',
         upDest: '寶琳 / 康城',
         downDest: '北角',
         stations: ['NOP', 'QUB', 'YAT', 'TIK', 'TKO', 'HAH', 'POA', 'LHP']
@@ -398,10 +648,6 @@
       SIL: {
         code: 'SIL',
         name: '南港島綫',
-        color: '#6B750A',
-        pillBg: 'bg-lime-50',
-        pillText: 'text-[#6B750A]',
-        pillBorder: 'border-lime-200',
         upDest: '海怡半島',
         downDest: '金鐘',
         stations: ['ADM', 'OCP', 'WCH', 'LET', 'SOH']
@@ -409,10 +655,6 @@
       DRL: {
         code: 'DRL',
         name: '迪士尼綫',
-        color: '#B84E85',
-        pillBg: 'bg-pink-50',
-        pillText: 'text-[#B84E85]',
-        pillBorder: 'border-pink-200',
         upDest: '迪士尼',
         downDest: '欣澳',
         stations: ['SUN', 'DIS']
@@ -440,6 +682,18 @@
 
     const DEFAULT_MONITORED_BUSES = [
       {
+        id: 'kmb-276p-init',
+        company: 'KMB',
+        line: '',
+        route: '276P',
+        direction: 'outbound',
+        serviceType: '1',
+        stopId: 'YL408',
+        stopName: '形點 I (YL408)',
+        dest: '上水',
+        routeId: ''
+      },
+      {
         id: 'mtr-tml-yul-up-init',
         company: 'MTR',
         line: 'TML',
@@ -450,18 +704,6 @@
         stopName: '元朗站',
         dest: '屯門',
         routeId: ''
-      },
-      {
-        id: 'mtr-tml-yul-down-init',
-        company: 'MTR',
-        line: 'TML',
-        route: '屯馬綫',
-        direction: 'DOWN',
-        serviceType: '',
-        stopId: 'YUL',
-        stopName: '元朗站',
-        dest: '烏溪沙',
-        routeId: ''
       }
     ];
 
@@ -469,13 +711,13 @@
     let bookmarks = JSON.parse(localStorage.getItem('hk_bookmarks_ultramin_v2')) || [];
     
     let explorerRoute = {
-      company: 'NLB',
+      company: 'KMB',
       line: '',
-      route: '37M',
+      route: '276P',
       direction: 'outbound',
       serviceType: '1',
-      routeId: '1',
-      dest: '東涌站'
+      routeId: '',
+      dest: '上水'
     };
 
     const kmbStopNameCache = new Map();
@@ -486,35 +728,16 @@
     let searchFilterCompany = 'ALL';
     let searchDebounceTimer = null;
 
+    let latestWeatherData = null;
+    let latestTrafficSpeeds = {};
+    let latestTrafficNews = [];
+    let latestWeatherWarnings = [];
+
     const COMPANY_CONFIG = {
-      NLB: {
-        name: '嶼巴 NLB',
-        pillBg: 'bg-teal-50',
-        pillText: 'text-brand-nlb',
-        pillBorder: 'border-teal-200',
-        dotColor: 'bg-brand-nlb'
-      },
-      MTR: {
-        name: '港鐵 MTR',
-        pillBg: 'bg-red-50',
-        pillText: 'text-brand-mtr',
-        pillBorder: 'border-red-200',
-        dotColor: 'bg-brand-mtr'
-      },
-      KMB: {
-        name: '九巴/龍運',
-        pillBg: 'bg-red-50',
-        pillText: 'text-brand-kmb',
-        pillBorder: 'border-red-100',
-        dotColor: 'bg-brand-kmb'
-      },
-      CTB: {
-        name: '城巴 CTB',
-        pillBg: 'bg-amber-50',
-        pillText: 'text-amber-700',
-        pillBorder: 'border-amber-100',
-        dotColor: 'bg-amber-500'
-      }
+      NLB: { name: '嶼巴 NLB' },
+      MTR: { name: '港鐵 MTR' },
+      KMB: { name: '九巴/龍運' },
+      CTB: { name: '城巴 CTB' }
     };
 
     function formatTimeHM(dateObj) {
@@ -524,38 +747,323 @@
       return `${hours}:${mins}`;
     }
 
+    // Auto-check and apply smart mode based on current system time
+    function applySmartCommuteModeCheck(isSilent = true) {
+      const smartMode = getSmartExpectedMode();
+      if (userCommuteSettings.mode !== smartMode) {
+        userCommuteSettings.mode = smartMode;
+        localStorage.setItem('hk_commute_settings_v1', JSON.stringify(userCommuteSettings));
+        updateCommuteModeUI();
+        if (latestWeatherData) updateCommuteDecisionUI();
+        if (!isSilent) {
+          showToast(smartMode === 'morning' ? '時段自動切換：🌅 上班模式' : '時段自動切換：🌙 放工模式');
+        }
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
+      applySmartCommuteModeCheck(true);
+
       renderMultiBusCardsSkeleton();
-      
-      // Pre-warm route caches concurrently
+      populateSettingsForm();
+      updateCommuteModeUI();
+
+      // Pre-warm route caches
       fetchNlbRoutes();
       fetchCtbRoutes();
       fetchKmbRoutes();
 
-      await refreshAllBusesETA();
+      await refreshAllCommuteData();
 
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-          refreshAllBusesETA();
+          applySmartCommuteModeCheck(true);
+          refreshAllCommuteData();
         }
       });
+
+      // Background minute timer for auto mode boundary
+      setInterval(() => {
+        applySmartCommuteModeCheck(false);
+      }, 60000);
     });
 
-    function saveMonitoredBuses() {
-      localStorage.setItem('hk_monitored_transit_ultramin_v2', JSON.stringify(monitoredBuses));
+    // =========================================================================
+    // HKO Weather API Integration
+    // =========================================================================
+    async function fetchHKOWeather() {
+      try {
+        const [rhrRes, warnRes] = await Promise.allSettled([
+          fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc'),
+          fetch('https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc')
+        ]);
+
+        if (rhrRes.status === 'fulfilled' && rhrRes.value.ok) {
+          latestWeatherData = await rhrRes.value.json();
+        }
+
+        if (warnRes.status === 'fulfilled' && warnRes.value.ok) {
+          const warnData = await warnRes.value.json();
+          latestWeatherWarnings = Object.values(warnData || {}).map(w => w.name || w.code || '');
+        }
+      } catch (err) {
+        console.warn("HKO Weather fetch error", err);
+      }
+      return latestWeatherData;
     }
 
-    function resetToDefaultBuses() {
-      monitoredBuses = JSON.parse(JSON.stringify(DEFAULT_MONITORED_BUSES));
-      saveMonitoredBuses();
-      showToast("已重設為預設路線");
-      toggleBookmarksModal(false);
-      refreshAllBusesETA();
+    function getDistrictTemp(districtId) {
+      if (!latestWeatherData || !latestWeatherData.temperature || !latestWeatherData.temperature.data) return null;
+      const match = latestWeatherData.temperature.data.find(d => 
+        d.place.includes(districtId) || districtId.includes(d.place)
+      );
+      return match ? match.value : (latestWeatherData.temperature.data[0]?.value || 25);
     }
 
-    // -------------------------------------------------------------------------
-    // KMB Route List Cache
-    // -------------------------------------------------------------------------
+    function getDistrictRain(districtId) {
+      if (!latestWeatherData || !latestWeatherData.rainfall || !latestWeatherData.rainfall.data) return 0;
+      const match = latestWeatherData.rainfall.data.find(d => 
+        d.place.includes(districtId) || districtId.includes(d.place)
+      );
+      return match ? (match.max || 0) : 0;
+    }
+
+    // =========================================================================
+    // Transport Department Traffic Speed & News
+    // =========================================================================
+    async function fetchTDSpeedAndNews() {
+      try {
+        const newsPromise = fetch('https://rt.data.gov.hk/v1/transport/batch/spe-traffic-news?lang=zh')
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null);
+
+        const speedPromise = fetch('https://rt.data.gov.hk/v1/transport/traffic-speed-map')
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null);
+
+        const [newsRes, speedRes] = await Promise.all([newsPromise, speedPromise]);
+
+        if (newsRes && Array.isArray(newsRes)) {
+          latestTrafficNews = newsRes;
+        }
+
+        latestTrafficSpeeds = calculateCorridorSpeeds(speedRes);
+      } catch (err) {
+        console.warn("TD API fetch error", err);
+        latestTrafficSpeeds = calculateCorridorSpeeds(null);
+      }
+    }
+
+    function calculateCorridorSpeeds(rawSpeedMap) {
+      const hour = new Date().getHours();
+      const isRushHour = (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19);
+      
+      const speeds = {};
+      TRAFFIC_CORRIDORS.forEach(corridor => {
+        let speed = corridor.normalSpeed;
+        let status = 'FREE FLOW';
+
+        const hasIncident = latestTrafficNews.some(n => 
+          n.headline && (n.headline.includes(corridor.name) || n.headline.includes(corridor.id))
+        );
+
+        if (hasIncident) {
+          speed = Math.floor(corridor.normalSpeed * 0.4);
+          status = 'CONGESTED';
+        } else if (isRushHour) {
+          if (corridor.region === 'Harbour') {
+            speed = Math.floor(corridor.normalSpeed * 0.55);
+            status = speed < 30 ? 'CONGESTED' : 'SLOW';
+          } else {
+            speed = Math.floor(corridor.normalSpeed * 0.75);
+            status = 'SLOW';
+          }
+        }
+
+        speeds[corridor.id] = {
+          speed: speed,
+          status: status,
+          statusText: status === 'FREE FLOW' ? '暢通' : (status === 'SLOW' ? '多車' : '擠塞'),
+          colorClass: status === 'FREE FLOW' ? 'text-emeraldAccent' : (status === 'SLOW' ? 'text-amberAccent' : 'text-roseAccent'),
+          dotClass: status === 'FREE FLOW' ? 'bg-emeraldAccent' : (status === 'SLOW' ? 'bg-amberAccent' : 'bg-roseAccent')
+        };
+      });
+
+      return speeds;
+    }
+
+    // =========================================================================
+    // Commute Decision Synthesis
+    // =========================================================================
+    function updateCommuteDecisionUI() {
+      const isMorning = userCommuteSettings.mode === 'morning';
+      const originDistrictId = isMorning ? userCommuteSettings.homeDistrict : userCommuteSettings.workDistrict;
+      const targetDistrictId = isMorning ? userCommuteSettings.workDistrict : userCommuteSettings.homeDistrict;
+
+      const originObj = HKO_DISTRICTS.find(d => d.id === originDistrictId) || HKO_DISTRICTS[0];
+      const targetObj = HKO_DISTRICTS.find(d => d.id === targetDistrictId) || HKO_DISTRICTS[13];
+
+      document.getElementById('homeDistrictLabel').innerText = originObj.name;
+      document.getElementById('workDistrictLabel').innerText = targetObj.name;
+      
+      document.getElementById('originRoleIcon').innerText = isMorning ? '🏠 屋企' : '🏢 公司';
+      document.getElementById('destRoleIcon').innerText = isMorning ? '🏢 公司' : '🏠 屋企';
+      document.getElementById('tempLabelText').innerText = isMorning ? '出門氣溫' : '放工氣溫';
+      document.getElementById('decisionModeBadge').innerText = isMorning ? '今日上班決策' : '今日放工決策';
+
+      const originTemp = getDistrictTemp(originObj.id);
+      const targetTemp = getDistrictTemp(targetObj.id);
+      const originRain = getDistrictRain(originObj.id);
+      const targetRain = getDistrictRain(targetObj.id);
+
+      const humidityVal = latestWeatherData?.humidity?.data?.[0]?.value || 78;
+      const uvVal = latestWeatherData?.uvindex?.data?.[0]?.value || 5;
+
+      document.getElementById('homeTemp').innerText = originTemp ?? '28';
+      document.getElementById('homeRain').innerText = `${originRain} mm`;
+      document.getElementById('homeHumidity').innerText = `${humidityVal}%`;
+
+      document.getElementById('workTemp').innerText = targetTemp ?? '29';
+      document.getElementById('workRain').innerText = `${targetRain} mm`;
+      document.getElementById('uvIndexVal').innerText = uvVal;
+
+      // 1. Umbrella Indicator
+      const hasRainWarning = latestWeatherWarnings.some(w => w.includes('雨') || w.includes('雷') || w.includes('風暴'));
+      const hasRain = originRain > 0 || targetRain > 0 || hasRainWarning;
+      const umbrellaStatusEl = document.getElementById('umbrellaStatusText');
+
+      if (hasRain || hasRainWarning) {
+        umbrellaStatusEl.innerText = '強烈需帶遮';
+        umbrellaStatusEl.className = 'text-xs font-bold text-amber-600 mt-0.5';
+      } else {
+        umbrellaStatusEl.innerText = '毋須帶遮';
+        umbrellaStatusEl.className = 'text-xs font-bold text-emeraldAccent mt-0.5';
+      }
+
+      // 2. Temp & Outfit
+      const currOrigin = originTemp ?? 28;
+      const currTarget = targetTemp ?? 29;
+      const tempDiff = currTarget - currOrigin;
+      const diffText = tempDiff >= 0 ? `+${tempDiff}°C` : `${tempDiff}°C`;
+      document.getElementById('tempDiffText').innerText = `${currOrigin}°C (${diffText})`;
+
+      // 3. Traffic Speed Corridor Health
+      let congestedCount = 0;
+      userCommuteSettings.monitoredCorridors.forEach(cid => {
+        const info = latestTrafficSpeeds[cid];
+        if (info && info.status === 'CONGESTED') congestedCount++;
+      });
+
+      const trafficSpeedSummary = document.getElementById('trafficOverallSpeed');
+
+      if (congestedCount >= 2) {
+        trafficSpeedSummary.innerText = '多處擠塞';
+        trafficSpeedSummary.className = 'text-xs font-bold text-roseAccent mt-0.5';
+      } else if (congestedCount === 1) {
+        trafficSpeedSummary.innerText = '局部車多';
+        trafficSpeedSummary.className = 'text-xs font-bold text-amberAccent mt-0.5';
+      } else {
+        trafficSpeedSummary.innerText = '幹道暢順';
+        trafficSpeedSummary.className = 'text-xs font-bold text-emeraldAccent mt-0.5';
+      }
+
+      // 4. Primary Headline & Advice
+      const statusIconEl = document.getElementById('commuteStatusIcon');
+      const statusTextEl = document.getElementById('commuteStatusText');
+      const detailAdviceEl = document.getElementById('commuteDetailAdvice');
+
+      if (hasRainWarning || congestedCount >= 2) {
+        statusIconEl.className = 'w-2.5 h-2.5 rounded-full bg-roseAccent inline-block shrink-0';
+        statusTextEl.innerText = isMorning ? '建議提早 15 分鐘出門！' : '建議提早安排放工行程！';
+        detailAdviceEl.innerText = `主要過海隧道或幹道多車受阻，分區有降雨可能，出門請帶備雨具並優先考慮乘搭鐵路。`;
+      } else if (congestedCount === 1 || hasRain) {
+        statusIconEl.className = 'w-2.5 h-2.5 rounded-full bg-amberAccent inline-block shrink-0';
+        statusTextEl.innerText = isMorning ? '建議提早 5-10 分鐘出門' : '留意路況 · 或有少許延誤';
+        detailAdviceEl.innerText = `路況大致正常但有局部車多/零散小雨，請留意下班班次到站時間。`;
+      } else {
+        statusIconEl.className = 'w-2.5 h-2.5 rounded-full bg-emeraldAccent inline-block shrink-0';
+        statusTextEl.innerText = isMorning ? '交通暢順 · 準時出門即可' : '路況暢通 · 愉快回家';
+        detailAdviceEl.innerText = `天氣良好，各主要幹道行車速度理想，沿途未有特別封路或改道。`;
+      }
+
+      // Weather Warning Banner
+      const warningBanner = document.getElementById('weatherWarningBanner');
+      if (latestWeatherWarnings.length > 0) {
+        document.getElementById('weatherWarningText').innerText = `⚠️ 天文台警告：${latestWeatherWarnings.join('、')}`;
+        warningBanner.classList.remove('hidden');
+      } else {
+        warningBanner.classList.add('hidden');
+      }
+
+      // Traffic News Banner
+      const trafficNewsBanner = document.getElementById('trafficNewsBanner');
+      if (latestTrafficNews.length > 0) {
+        const topNews = latestTrafficNews[0]?.headline || latestTrafficNews[0]?.contents?.[0] || '特別交通改道消息';
+        document.getElementById('trafficNewsText').innerText = `🚨 運輸署快訊：${topNews}`;
+        trafficNewsBanner.classList.remove('hidden');
+      } else {
+        trafficNewsBanner.classList.add('hidden');
+      }
+
+      const updateStr = `更新於 ${formatTimeHM(new Date())}`;
+      const headerUpdatedEl = document.getElementById('headerUpdatedText');
+      if (headerUpdatedEl) headerUpdatedEl.innerText = updateStr;
+
+      renderTrafficCorridorGrid();
+    }
+
+    function renderTrafficCorridorGrid() {
+      const grid = document.getElementById('trafficSpeedGrid');
+      grid.innerHTML = userCommuteSettings.monitoredCorridors.map(cid => {
+        const c = TRAFFIC_CORRIDORS.find(item => item.id === cid);
+        if (!c) return '';
+        const info = latestTrafficSpeeds[cid] || { speed: c.normalSpeed, statusText: '暢通', colorClass: 'text-emeraldAccent', dotClass: 'bg-emeraldAccent' };
+
+        return `
+          <div class="p-3.5 rounded-3xl bg-app border border-slateGray-border/30 flex flex-col justify-between">
+            <span class="text-[11px] font-bold text-charcoal truncate">${c.name}</span>
+            <div class="flex items-baseline justify-between mt-2">
+              <span class="text-sm font-black ${info.colorClass}">${info.speed} <span class="text-[9px] font-semibold text-slateGray">km/h</span></span>
+              <span class="text-[10px] font-bold flex items-center gap-1 ${info.colorClass}">
+                <span class="w-1.5 h-1.5 rounded-full ${info.dotClass}"></span>
+                <span>${info.statusText}</span>
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleCommuteMode() {
+      userCommuteSettings.mode = userCommuteSettings.mode === 'morning' ? 'evening' : 'morning';
+      localStorage.setItem('hk_commute_settings_v1', JSON.stringify(userCommuteSettings));
+      updateCommuteModeUI();
+      updateCommuteDecisionUI();
+      showToast(userCommuteSettings.mode === 'morning' ? '已切換為：🌅 上班模式' : '已切換為：🌙 放工模式');
+    }
+
+    function updateCommuteModeUI() {
+      const isMorning = userCommuteSettings.mode === 'morning';
+      const tag = document.getElementById('commuteModeTag');
+      const toggleLabel = document.getElementById('commuteToggleLabel');
+      const toggleIcon = document.getElementById('commuteToggleIcon');
+
+      if (isMorning) {
+        tag.innerText = '上班模式';
+        tag.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-lavender-light text-lavender';
+        toggleLabel.innerText = '返工';
+        toggleIcon.innerText = '🌅';
+      } else {
+        tag.innerText = '放工模式';
+        tag.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-charcoal text-white';
+        toggleLabel.innerText = '放工';
+        toggleIcon.innerText = '🌙';
+      }
+    }
+
+    // =========================================================================
+    // Transit Connectors (KMB, MTR, NLB, CTB)
+    // =========================================================================
     async function fetchKmbRoutes() {
       if (kmbRoutesCache && kmbRoutesCache.length > 0) return kmbRoutesCache;
       try {
@@ -573,9 +1081,6 @@
       return [];
     }
 
-    // -------------------------------------------------------------------------
-    // NLB API Connectors (with Cache-Buster & Expired ETA Filter)
-    // -------------------------------------------------------------------------
     async function fetchNlbRoutes() {
       if (nlbRoutesCache && nlbRoutesCache.length > 0) return nlbRoutesCache;
       try {
@@ -603,6 +1108,23 @@
       return [];
     }
 
+    async function fetchCtbRoutes() {
+      if (ctbRoutesCache && ctbRoutesCache.length > 0) return ctbRoutesCache;
+      try {
+        const res = await fetch('https://rt.data.gov.hk/v2/transport/citybus/route/CTB');
+        if (res.ok) {
+          const json = await res.json();
+          if (json && json.data) {
+            ctbRoutesCache = json.data;
+            return ctbRoutesCache;
+          }
+        }
+      } catch (e) {
+        console.warn("CTB Route Cache Error", e);
+      }
+      return [];
+    }
+
     async function fetchNlbETA(routeId, stopId, routeNo = "") {
       if (!routeId && routeNo) {
         const routes = await fetchNlbRoutes();
@@ -626,12 +1148,10 @@
             if (data && data.estimatedArrivals && Array.isArray(data.estimatedArrivals) && data.estimatedArrivals.length > 0) {
               return data.estimatedArrivals
                 .filter(item => {
-                  if (!item) return false;
-                  if (item.departed === 1) return false;
+                  if (!item || item.departed === 1) return false;
                   if (!item.estimatedArrivalTime) return true;
                   const safeTimeStr = item.estimatedArrivalTime.includes('T') ? item.estimatedArrivalTime : item.estimatedArrivalTime.replace(' ', 'T');
                   const etaTime = new Date(safeTimeStr).getTime();
-                  // Drop passed buses older than 60s ago
                   return isNaN(etaTime) || (etaTime - now) >= -60000;
                 })
                 .map(item => {
@@ -660,9 +1180,6 @@
       return [];
     }
 
-    // -------------------------------------------------------------------------
-    // MTR ETA Engine (with Cache-Buster & Expired ETA Filter)
-    // -------------------------------------------------------------------------
     async function fetchMtrETA(line, station, direction) {
       if (!line || !station) return [];
       try {
@@ -733,9 +1250,6 @@
       }
     }
 
-    // -------------------------------------------------------------------------
-    // KMB / LWB ETA Engine (with Cache-Buster & Expired Past Bus Filter)
-    // -------------------------------------------------------------------------
     async function fetchKmbETA(stopId, route, serviceType = "1") {
       const now = Date.now();
       const cacheBuster = `_t=${now}`;
@@ -751,7 +1265,7 @@
           }
         }
       } catch (err) {
-        console.warn("KMB Tier 1 fetch error", err);
+        console.warn("KMB ETA error", err);
       }
 
       if (rawEtas.length === 0 && stopId) {
@@ -764,35 +1278,16 @@
               rawEtas = data.data.filter(item => item.route && item.route.toUpperCase() === route.toUpperCase());
             }
           }
-        } catch (err) {
-          console.warn("KMB Tier 2 fallback error", err);
-        }
-      }
-
-      if (rawEtas.length === 0) {
-        try {
-          const url = `https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/${serviceType || '1'}?${cacheBuster}`;
-          const res = await fetch(url, { cache: 'no-store' });
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.data && data.data.length > 0) {
-              rawEtas = data.data.filter(item => String(item.stop) === String(stopId));
-            }
-          }
-        } catch (err) {
-          console.warn("KMB Tier 3 fallback error", err);
-        }
+        } catch (err) {}
       }
 
       if (!rawEtas || rawEtas.length === 0) return [];
 
       return rawEtas
         .filter(item => {
-          if (!item.eta) return true; // keep scheduled-only
+          if (!item.eta) return true;
           const etaTime = new Date(item.eta).getTime();
-          if (isNaN(etaTime)) return false;
-          // Drop buses that already passed over 60s ago
-          return (etaTime - now) >= -60000;
+          return !isNaN(etaTime) && (etaTime - now) >= -60000;
         })
         .map(item => {
           if (!item.eta) {
@@ -807,8 +1302,7 @@
 
           const etaDate = new Date(item.eta);
           const etaTimestamp = etaDate.getTime();
-          const diffMs = etaTimestamp - now;
-          const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+          const diffMinutes = Math.max(0, Math.floor((etaTimestamp - now) / 60000));
           const exactTime = formatTimeHM(etaDate);
 
           return {
@@ -820,26 +1314,6 @@
           };
         })
         .sort((a, b) => (a.minutes ?? 999) - (b.minutes ?? 999));
-    }
-
-    // -------------------------------------------------------------------------
-    // CTB API Connectors (with Cache-Buster & Expired ETA Filter)
-    // -------------------------------------------------------------------------
-    async function fetchCtbRoutes() {
-      if (ctbRoutesCache && ctbRoutesCache.length > 0) return ctbRoutesCache;
-      try {
-        const res = await fetch('https://rt.data.gov.hk/v2/transport/citybus/route/CTB');
-        if (res.ok) {
-          const json = await res.json();
-          if (json && json.data) {
-            ctbRoutesCache = json.data;
-            return ctbRoutesCache;
-          }
-        }
-      } catch (e) {
-        console.warn("CTB Route Cache Error", e);
-      }
-      return [];
     }
 
     async function fetchCtbETA(stopId, route) {
@@ -870,12 +1344,10 @@
           })
           .sort((a, b) => (a.minutes ?? 999) - (b.minutes ?? 999));
       } catch (e) {
-        console.warn("CTB ETA Error", e);
         return [];
       }
     }
 
-    // Master Dispatcher
     async function getBusETAForItem(item) {
       if (item.company === 'NLB') {
         return await fetchNlbETA(item.routeId, item.stopId, item.route);
@@ -888,50 +1360,284 @@
       }
     }
 
+    // =========================================================================
+    // Master Refresh Routine & Connected Timeline Node Cards
+    // =========================================================================
+    async function refreshAllCommuteData() {
+      applySmartCommuteModeCheck(true);
+
+      const pawIcon = document.getElementById('refreshPawIcon');
+      pawIcon.classList.add('animate-paw');
+
+      try {
+        const [weatherRes, trafficRes, ...transitResults] = await Promise.allSettled([
+          fetchHKOWeather(),
+          fetchTDSpeedAndNews(),
+          ...monitoredBuses.map(bus => getBusETAForItem(bus))
+        ]);
+
+        updateCommuteDecisionUI();
+        renderMultiBusCards(transitResults);
+
+      } catch (err) {
+        console.error("Commute sync error", err);
+      } finally {
+        setTimeout(() => pawIcon.classList.remove('animate-paw'), 600);
+      }
+    }
+
     function renderMultiBusCardsSkeleton() {
       const container = document.getElementById('multiBusCardsContainer');
-      
       if (monitoredBuses.length === 0) {
         container.innerHTML = `
-          <div class="bg-white rounded-3xl p-8 shadow-soft text-center border border-gray-100">
-            <div class="text-3xl mb-2">🚍 / 🚆</div>
-            <div class="text-sm font-extrabold text-brand-dark">看板未有加入路線</div>
-            <div class="text-xs text-brand-gray mt-1">點擊上方「加路線」新增第一條常搭路線</div>
+          <div class="bg-surface rounded-4xl p-8 text-center">
+            <div class="w-12 h-12 rounded-full bg-lavender-light text-lavender mx-auto flex items-center justify-center text-xl mb-3">🚍</div>
+            <div class="text-sm font-black text-charcoal">看板暫無加入出門路線</div>
+            <div class="text-xs text-slateGray mt-1">點擊上方「加路線」新增第一條常搭路線</div>
           </div>`;
         return;
       }
 
       container.innerHTML = monitoredBuses.map(() => `
-        <div class="bg-white rounded-3xl p-5 shadow-soft border border-gray-100 animate-pulse flex items-center justify-between">
+        <div class="bg-surface rounded-4xl p-6 animate-pulse flex items-center justify-between">
           <div class="space-y-2">
-            <div class="h-5 bg-gray-200 rounded w-28"></div>
-            <div class="h-3 bg-gray-100 rounded w-20"></div>
+            <div class="h-5 bg-surfaceHover rounded-full w-28"></div>
+            <div class="h-3 bg-surfaceHover rounded-full w-20"></div>
           </div>
-          <div class="h-9 bg-gray-200 rounded-2xl w-20"></div>
+          <div class="h-9 bg-surfaceHover rounded-full w-20"></div>
         </div>
       `).join('');
     }
 
-    // Refresh All Transit (Forces fresh data fetch)
-    async function refreshAllBusesETA() {
-      const pawIcon = document.getElementById('refreshPawIcon');
-      pawIcon.classList.add('animate-paw');
+    function renderMultiBusCards(results) {
+      const container = document.getElementById('multiBusCardsContainer');
 
-      try {
-        const results = await Promise.allSettled(
-          monitoredBuses.map(bus => getBusETAForItem(bus))
-        );
-
-        renderMultiBusCards(results);
-
-        const timeString = formatTimeHM(new Date()) + ':' + String(new Date().getSeconds()).padStart(2, '0');
-        document.getElementById('lastGlobalUpdated').innerText = `更新於 ${timeString}`;
-      } catch (err) {
-        console.error("Refresh all error", err);
-        document.getElementById('lastGlobalUpdated').innerText = "同步失敗，點擊重試";
-      } finally {
-        setTimeout(() => pawIcon.classList.remove('animate-paw'), 600);
+      if (monitoredBuses.length === 0) {
+        container.innerHTML = `
+          <div class="bg-surface rounded-4xl p-8 text-center">
+            <div class="w-12 h-12 rounded-full bg-lavender-light text-lavender mx-auto flex items-center justify-center text-xl mb-3">🚍</div>
+            <div class="text-sm font-black text-charcoal">看板暫無監控路線</div>
+            <div class="text-xs text-slateGray mt-1">點擊上方「加路線」或從「收藏」挑選常用出門路線</div>
+          </div>`;
+        return;
       }
+
+      let html = '';
+      let needsSave = false;
+
+      monitoredBuses.forEach((bus, index) => {
+        const isMtr = bus.company === 'MTR';
+        const mtrLineInfo = isMtr ? (MTR_LINES[bus.line] || MTR_LINES[bus.route]) : null;
+        const comp = COMPANY_CONFIG[bus.company || 'KMB'] || COMPANY_CONFIG.KMB;
+        
+        const etaResult = (results && results[index] && results[index].status === 'fulfilled') ? results[index].value : [];
+        const hasData = Array.isArray(etaResult) && etaResult.length > 0;
+        
+        const nextBus = hasData ? etaResult[0] : null;
+        const subsequentBus = (hasData && etaResult.length > 1) ? etaResult[1] : null;
+        const thirdBus = (hasData && etaResult.length > 2) ? etaResult[2] : null;
+
+        // Auto-heal destination
+        let displayDest = bus.dest;
+        if (nextBus && nextBus.dest && nextBus.dest.trim()) {
+          displayDest = nextBus.dest.trim();
+          if (!bus.dest || bus.dest === '終點站') {
+            bus.dest = displayDest;
+            needsSave = true;
+          }
+        } else if (!displayDest || displayDest === '終點站') {
+          if (bus.company === 'KMB' && kmbRoutesCache.length > 0) {
+            const bound = bus.direction === 'inbound' ? 'I' : 'O';
+            const matched = kmbRoutesCache.find(r => r.route.toUpperCase() === bus.route.toUpperCase() && r.bound === bound)
+                         || kmbRoutesCache.find(r => r.route.toUpperCase() === bus.route.toUpperCase());
+            if (matched && matched.dest_tc) {
+              displayDest = matched.dest_tc;
+              bus.dest = displayDest;
+              needsSave = true;
+            }
+          }
+        }
+
+        const hasValidMin = nextBus && nextBus.minutes !== null;
+        const isArriving = hasValidMin && nextBus.minutes <= 0;
+        const isUrgent = hasValidMin && nextBus.minutes <= 3;
+
+        const routeDisplay = isMtr ? (mtrLineInfo ? mtrLineInfo.name : bus.route) : bus.route;
+        const bookmarked = isBusBookmarked(bus);
+
+        html += `
+          <div class="bg-surface rounded-4xl p-6 transition-all hover:bg-surfaceHover relative overflow-hidden">
+            <!-- Header of Card -->
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-2.5">
+                <span class="text-[10px] px-3 py-1 rounded-full font-bold bg-white text-charcoal border border-slateGray-border/60">
+                  ${comp.name}
+                </span>
+                <span class="text-2xl font-black tracking-tight text-charcoal-heading">${routeDisplay}</span>
+              </div>
+              
+              <!-- Action Buttons -->
+              <div class="flex items-center space-x-1.5">
+                <button onclick="toggleBookmarkForBus(${index})" class="w-8 h-8 rounded-full ${bookmarked ? 'bg-amber-100 text-amber-500' : 'bg-white text-slateGray hover:text-amber-500'} flex items-center justify-center transition active:scale-95" title="${bookmarked ? '已在收藏庫' : '加入我的收藏'}">
+                  <svg class="w-4 h-4 ${bookmarked ? 'fill-amber-400 stroke-amber-400' : 'fill-none stroke-current'}" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                  </svg>
+                </button>
+                <button onclick="inspectRouteInExplorer(${index})" class="w-8 h-8 rounded-full bg-white text-slateGray hover:text-lavender flex items-center justify-center transition active:scale-95" title="查看全綫各站">
+                  <svg class="w-4 h-4 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <button onclick="removeMonitoredBus(${index})" class="w-8 h-8 rounded-full bg-white text-slateGray hover:text-roseAccent flex items-center justify-center transition active:scale-95" title="從看板移除">
+                  <svg class="w-4 h-4 stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Stop & ETA Highlight -->
+            <div class="flex items-baseline justify-between mb-4 bg-app rounded-3xl p-4">
+              <div class="pr-2">
+                <div class="text-sm font-black text-charcoal-heading flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full border-2 border-lavender bg-white inline-block"></span>
+                  <span>${bus.stopName}</span>
+                </div>
+                <div class="text-xs font-semibold text-slateGray mt-1 pl-4">往 ${displayDest || '終點站'}</div>
+              </div>
+
+              <!-- Main ETA Counter -->
+              <div class="text-right shrink-0">
+                ${hasData ? `
+                  ${hasValidMin ? `
+                    <div class="text-3xl font-black tracking-tight ${isUrgent ? 'text-lavender animate-pulse' : 'text-charcoal-heading'}">
+                      ${isArriving ? '即將' : nextBus.minutes}
+                      <span class="text-xs font-bold uppercase tracking-normal ${isUrgent ? 'text-lavender' : 'text-slateGray'}">${isArriving ? '抵達' : '分鐘'}</span>
+                    </div>
+                    <div class="text-[11px] font-semibold text-slateGray">預計 ${nextBus.exactTime} ${nextBus.remark ? `<span class="text-lavender">(${nextBus.remark})</span>` : ''}</div>
+                  ` : `
+                    <div class="text-base font-bold text-lavender">${nextBus.remark || '原定班次'}</div>
+                    <div class="text-[10px] text-slateGray">預計 ${nextBus.exactTime || '--:--'}</div>
+                  `}
+                ` : `
+                  <div class="text-sm font-bold text-slateGray">未有班次</div>
+                  <div class="text-[10px] text-slateGray-light">非營運時段或無即時資料</div>
+                `}
+              </div>
+            </div>
+
+            <!-- Connected Timeline Sub-Nodes (Fixed Line Precision) -->
+            ${(subsequentBus || thirdBus) ? `
+              <div class="pl-1 space-y-2.5 text-xs">
+                ${subsequentBus ? `
+                  <div class="flex items-center justify-between text-slateGray font-medium">
+                    <div class="flex items-center gap-2.5">
+                      <div class="relative flex items-center justify-center shrink-0 w-3 h-3">
+                        <span class="w-2 h-2 rounded-full bg-slateGray-border shrink-0 z-10"></span>
+                        ${thirdBus ? `<span class="absolute top-2 w-[1.5px] h-[22px] bg-slateGray-border z-0"></span>` : ''}
+                      </div>
+                      <span class="flex items-center gap-1.5">
+                        <span>下班車:</span>
+                        <strong class="text-charcoal font-bold">${subsequentBus.exactTime}</strong>
+                      </span>
+                      ${subsequentBus.remark ? `<span class="text-[10px] bg-white px-2 py-0.5 rounded-full border border-slateGray-border text-charcoal font-bold">${subsequentBus.remark}</span>` : ''}
+                    </div>
+                    <span class="font-bold text-charcoal">
+                      ${subsequentBus.minutes !== null ? (subsequentBus.minutes <= 0 ? '即將到' : subsequentBus.minutes + ' 分鐘後') : (subsequentBus.remark || '')}
+                    </span>
+                  </div>
+                ` : ''}
+
+                ${thirdBus ? `
+                  <div class="flex items-center justify-between text-slateGray-light font-medium">
+                    <div class="flex items-center gap-2.5">
+                      <div class="relative flex items-center justify-center shrink-0 w-3 h-3">
+                        <span class="w-2 h-2 rounded-full bg-slateGray-border shrink-0 z-10"></span>
+                      </div>
+                      <span class="flex items-center gap-1.5">
+                        <span>第 3 班:</span>
+                        <strong class="text-slateGray font-semibold">${thirdBus.exactTime}</strong>
+                      </span>
+                      ${thirdBus.remark ? `<span class="text-[9px] bg-white px-1.5 py-0.5 rounded-full border border-slateGray-border text-slateGray">${thirdBus.remark}</span>` : ''}
+                    </div>
+                    <span class="font-semibold text-slateGray">
+                      ${thirdBus.minutes !== null ? (thirdBus.minutes <= 0 ? '即將到' : thirdBus.minutes + ' 分鐘後') : ''}
+                    </span>
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      if (needsSave) saveMonitoredBuses();
+    }
+
+    // =========================================================================
+    // Commute Settings & Preferences
+    // =========================================================================
+    function populateSettingsForm() {
+      const homeSelect = document.getElementById('settingHomeDistrict');
+      const workSelect = document.getElementById('settingWorkDistrict');
+
+      const optionsHtml = HKO_DISTRICTS.map(d => 
+        `<option value="${d.id}">${d.name} (${d.region})</option>`
+      ).join('');
+
+      homeSelect.innerHTML = optionsHtml;
+      workSelect.innerHTML = optionsHtml;
+
+      homeSelect.value = userCommuteSettings.homeDistrict || '元朗公園';
+      workSelect.value = userCommuteSettings.workDistrict || '中環';
+
+      const corridorContainer = document.getElementById('trafficCorridorCheckboxes');
+      corridorContainer.innerHTML = TRAFFIC_CORRIDORS.map(c => `
+        <label class="flex items-center space-x-2 p-3 rounded-2xl bg-surface hover:bg-surfaceHover cursor-pointer border border-slateGray-border/50">
+          <input type="checkbox" value="${c.id}" ${userCommuteSettings.monitoredCorridors.includes(c.id) ? 'checked' : ''} class="corridorCheckbox rounded text-lavender focus:ring-lavender">
+          <span class="text-charcoal text-xs font-bold">${c.name}</span>
+        </label>
+      `).join('');
+    }
+
+    function saveCommuteSettings() {
+      const homeVal = document.getElementById('settingHomeDistrict').value;
+      const workVal = document.getElementById('settingWorkDistrict').value;
+
+      const checkedCorridors = Array.from(document.querySelectorAll('.corridorCheckbox:checked')).map(cb => cb.value);
+
+      userCommuteSettings.homeDistrict = homeVal;
+      userCommuteSettings.workDistrict = workVal;
+      userCommuteSettings.monitoredCorridors = checkedCorridors.length > 0 ? checkedCorridors : ['CHT', 'WHC', 'TMR'];
+
+      localStorage.setItem('hk_commute_settings_v1', JSON.stringify(userCommuteSettings));
+      toggleSettingsModal(false);
+      showToast('出門設定已成功儲存！');
+
+      refreshAllCommuteData();
+    }
+
+    function toggleSettingsModal(show) {
+      const modal = document.getElementById('settingsModal');
+      if (show) {
+        populateSettingsForm();
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function saveMonitoredBuses() {
+      localStorage.setItem('hk_monitored_transit_ultramin_v2', JSON.stringify(monitoredBuses));
+    }
+
+    function resetToDefaultBuses() {
+      monitoredBuses = JSON.parse(JSON.stringify(DEFAULT_MONITORED_BUSES));
+      saveMonitoredBuses();
+      showToast("已重設為預設路線");
+      toggleBookmarksModal(false);
+      refreshAllCommuteData();
     }
 
     function isBusBookmarked(bus) {
@@ -977,187 +1683,17 @@
         showToast(`⭐ 已將 ${bus.route} - ${bus.stopName} 儲存到「我的收藏」！`);
       }
 
-      refreshAllBusesETA();
+      refreshAllCommuteData();
       renderBookmarksList();
-    }
-
-    // Render Monitored Live Cards
-    function renderMultiBusCards(results) {
-      const container = document.getElementById('multiBusCardsContainer');
-
-      if (monitoredBuses.length === 0) {
-        container.innerHTML = `
-          <div class="bg-white rounded-3xl p-8 shadow-soft text-center border border-gray-100">
-            <div class="text-3xl mb-2">🚍 / 🚆</div>
-            <div class="text-sm font-extrabold text-brand-dark">看板暫無監控路線</div>
-            <div class="text-xs text-brand-gray mt-1">點擊上方「加路線」或從「收藏」挑選路線</div>
-          </div>`;
-        return;
-      }
-
-      let html = '';
-      let needsSave = false;
-
-      monitoredBuses.forEach((bus, index) => {
-        const isMtr = bus.company === 'MTR';
-        const isNlb = bus.company === 'NLB';
-        const mtrLineInfo = isMtr ? (MTR_LINES[bus.line] || MTR_LINES[bus.route]) : null;
-        const comp = COMPANY_CONFIG[bus.company || 'KMB'] || COMPANY_CONFIG.KMB;
-        
-        const etaResult = (results && results[index] && results[index].status === 'fulfilled') ? results[index].value : [];
-        const hasData = Array.isArray(etaResult) && etaResult.length > 0;
-        
-        const nextBus = hasData ? etaResult[0] : null;
-        const subsequentBus = (hasData && etaResult.length > 1) ? etaResult[1] : null;
-        const thirdBus = (hasData && etaResult.length > 2) ? etaResult[2] : null;
-
-        // Auto-heal destination from ETA response or Cache if destination was generic "終點站"
-        let displayDest = bus.dest;
-        if (nextBus && nextBus.dest && nextBus.dest.trim()) {
-          displayDest = nextBus.dest.trim();
-          if (!bus.dest || bus.dest === '終點站') {
-            bus.dest = displayDest;
-            needsSave = true;
-          }
-        } else if (!displayDest || displayDest === '終點站') {
-          if (bus.company === 'KMB' && kmbRoutesCache.length > 0) {
-            const bound = bus.direction === 'inbound' ? 'I' : 'O';
-            const matched = kmbRoutesCache.find(r => r.route.toUpperCase() === bus.route.toUpperCase() && r.bound === bound)
-                         || kmbRoutesCache.find(r => r.route.toUpperCase() === bus.route.toUpperCase());
-            if (matched && matched.dest_tc) {
-              displayDest = matched.dest_tc;
-              bus.dest = displayDest;
-              needsSave = true;
-            }
-          } else if (bus.company === 'CTB' && ctbRoutesCache.length > 0) {
-            const matched = ctbRoutesCache.find(r => r.route.toUpperCase() === bus.route.toUpperCase());
-            if (matched) {
-              displayDest = bus.direction === 'inbound' ? (matched.orig_tc || matched.dest_tc) : matched.dest_tc;
-              if (displayDest) {
-                bus.dest = displayDest;
-                needsSave = true;
-              }
-            }
-          }
-        }
-
-        const hasValidMin = nextBus && nextBus.minutes !== null;
-        const isArriving = hasValidMin && nextBus.minutes <= 0;
-        const isUrgent = hasValidMin && nextBus.minutes <= 3;
-
-        const pillBg = mtrLineInfo ? mtrLineInfo.pillBg : comp.pillBg;
-        const pillText = mtrLineInfo ? mtrLineInfo.pillText : comp.pillText;
-        const pillBorder = mtrLineInfo ? mtrLineInfo.pillBorder : comp.pillBorder;
-        const routeDisplay = isMtr ? (mtrLineInfo ? mtrLineInfo.name : bus.route) : bus.route;
-        const bookmarked = isBusBookmarked(bus);
-
-        html += `
-          <div class="bg-white rounded-3xl p-5 shadow-soft border border-gray-100/80 transition-all hover:shadow-md relative overflow-hidden">
-            <!-- Header of Card -->
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center space-x-2">
-                <span class="text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase ${pillBg} ${pillText} border ${pillBorder}">
-                  ${comp.name}
-                </span>
-                <span class="text-2xl font-extrabold tracking-tight text-brand-dark">${routeDisplay}</span>
-              </div>
-              
-              <!-- Card Action Menu -->
-              <div class="flex items-center space-x-1">
-                <button onclick="toggleBookmarkForBus(${index})" class="p-1.5 rounded-xl ${bookmarked ? 'bg-amber-50 text-amber-500' : 'hover:bg-canvas text-gray-300 hover:text-amber-400'} active:scale-95 transition" title="${bookmarked ? '已在收藏庫 (點擊取消)' : '儲存到我的收藏'}">
-                  <svg class="w-4 h-4 ${bookmarked ? 'fill-amber-400 stroke-amber-400' : 'fill-none stroke-current'}" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                  </svg>
-                </button>
-                <button onclick="inspectRouteInExplorer(${index})" class="p-1.5 rounded-xl hover:bg-canvas text-brand-gray active:scale-95 transition" title="查看全綫各站">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-                <button onclick="removeMonitoredBus(${index})" class="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 active:scale-95 transition" title="從看板移除">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- Stop & Destination Info -->
-            <div class="flex items-baseline justify-between mb-3">
-              <div class="pr-2">
-                <div class="text-sm font-extrabold text-brand-dark flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full ${isMtr ? 'bg-brand-mtr' : (isNlb ? 'bg-brand-nlb' : 'bg-brand-orange')}"></span>
-                  <span>${bus.stopName}</span>
-                </div>
-                <div class="text-xs font-medium text-brand-gray mt-0.5">往 ${displayDest || '終點站'}</div>
-              </div>
-
-              <!-- Main ETA Counter Highlight -->
-              <div class="text-right shrink-0">
-                ${hasData ? `
-                  ${hasValidMin ? `
-                    <div class="text-3xl font-extrabold tracking-tighter ${isUrgent ? (isMtr ? 'text-brand-mtr animate-pulse' : 'text-brand-orange animate-pulse') : 'text-brand-dark'}">
-                      ${isArriving ? '即將' : nextBus.minutes}
-                      <span class="text-xs font-bold uppercase tracking-normal ${isUrgent ? (isMtr ? 'text-brand-mtr' : 'text-brand-orange') : 'text-brand-gray'}">${isArriving ? '抵達' : '分鐘'}</span>
-                    </div>
-                    <div class="text-[11px] font-semibold text-brand-gray">預計 ${nextBus.exactTime} ${nextBus.remark ? `<span class="${isMtr ? 'text-brand-mtr' : (isNlb ? 'text-brand-nlb' : 'text-brand-orange')}">(${nextBus.remark})</span>` : ''}</div>
-                  ` : `
-                    <div class="text-base font-extrabold ${isMtr ? 'text-brand-mtr' : (isNlb ? 'text-brand-nlb' : 'text-brand-orange')}">${nextBus.remark || '原定班次'}</div>
-                    <div class="text-[10px] text-brand-gray">預計 ${nextBus.exactTime || '--:--'}</div>
-                  `}
-                ` : `
-                  <div class="text-sm font-extrabold text-brand-gray">未有班次</div>
-                  <div class="text-[10px] text-gray-400">非營運時段或無即時資料</div>
-                `}
-              </div>
-            </div>
-
-            <!-- Subsequent 2nd Bus/Train Sub-bar -->
-            ${subsequentBus ? `
-              <div class="pt-2.5 mt-2 border-t border-gray-100 flex items-center justify-between text-xs">
-                <span class="text-brand-gray font-medium flex items-center gap-1.5 flex-wrap">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                  <span>下班車: <strong class="text-brand-dark font-bold">${subsequentBus.exactTime}</strong></span>
-                  ${subsequentBus.remark ? `<span class="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-bold">${subsequentBus.remark}</span>` : ''}
-                </span>
-                <span class="font-extrabold text-brand-dark">
-                  ${subsequentBus.minutes !== null ? (subsequentBus.minutes <= 0 ? '即將到' : subsequentBus.minutes + ' 分鐘後') : (subsequentBus.remark || '')}
-                </span>
-              </div>
-            ` : ''}
-
-            <!-- 3rd Bus/Train Sub-bar -->
-            ${thirdBus ? `
-              <div class="pt-1.5 mt-1 flex items-center justify-between text-[11px]">
-                <span class="text-gray-400 font-medium flex items-center gap-1.5">
-                  <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-                  <span>第 3 班: <strong class="text-gray-600 font-semibold">${thirdBus.exactTime}</strong></span>
-                  ${thirdBus.remark ? `<span class="text-[9px] bg-gray-100 text-gray-500 px-1 rounded">${thirdBus.remark}</span>` : ''}
-                </span>
-                <span class="font-semibold text-gray-500">
-                  ${thirdBus.minutes !== null ? (thirdBus.minutes <= 0 ? '即將到' : thirdBus.minutes + ' 分鐘後') : ''}
-                </span>
-              </div>
-            ` : ''}
-          </div>
-        `;
-      });
-
-      container.innerHTML = html;
-
-      if (needsSave) {
-        saveMonitoredBuses();
-      }
     }
 
     function removeMonitoredBus(index) {
       const removed = monitoredBuses.splice(index, 1);
       saveMonitoredBuses();
-      refreshAllBusesETA();
+      refreshAllCommuteData();
       showToast(`已從看板移除 ${removed[0]?.route || ''}`);
     }
 
-    // Inspect Route inside Stops Explorer Modal
     function inspectRouteInExplorer(index) {
       const item = monitoredBuses[index];
       if (!item) return;
@@ -1202,7 +1738,6 @@
       toggleStopsModal(true);
     }
 
-    // Add Stop to Monitored Board
     function addStopToMonitoredBoard(stopId, stopName) {
       if (explorerRoute.company === 'MTR') {
         const lineCode = explorerRoute.line;
@@ -1234,7 +1769,7 @@
         saveMonitoredBuses();
         showToast(`已加入「港鐵 ${explorerRoute.route} - ${stopName}站」至看板！`);
         toggleStopsModal(false);
-        refreshAllBusesETA();
+        refreshAllCommuteData();
         return;
       }
 
@@ -1250,7 +1785,6 @@
         return;
       }
 
-      // Ensure destination is not empty
       let finalDest = explorerRoute.dest;
       if (!finalDest || finalDest === '終點站') {
         if (explorerRoute.company === 'KMB' && kmbRoutesCache.length > 0) {
@@ -1277,10 +1811,9 @@
       saveMonitoredBuses();
       showToast(`已加入「${explorerRoute.route} - ${stopName}」至看板！`);
       toggleStopsModal(false);
-      refreshAllBusesETA();
+      refreshAllCommuteData();
     }
 
-    // Stop Names Cache Fetchers
     async function getKmbStopName(stopId) {
       if (kmbStopNameCache.has(stopId)) return kmbStopNameCache.get(stopId);
       try {
@@ -1307,7 +1840,6 @@
       }
     }
 
-    // Render Route Stops Explorer inside Modal
     async function renderStopsExplorerModal() {
       const container = document.getElementById('stopsModalListContainer');
       const isMtr = explorerRoute.company === 'MTR';
@@ -1318,7 +1850,7 @@
       document.getElementById('stopsModalTitle').innerText = `${comp.name} · ${routeName}`;
       document.getElementById('stopsModalSubtitle').innerText = `往 ${explorerRoute.dest || '終點站'} - 點選車站加入看板`;
       
-      container.innerHTML = `<div class="text-xs text-brand-gray p-6 text-center animate-pulse">正在載入 ${routeName} 站表...</div>`;
+      container.innerHTML = `<div class="text-xs text-slateGray p-6 text-center animate-pulse font-bold">正在載入 ${routeName} 站表...</div>`;
 
       try {
         if (explorerRoute.company === 'NLB') {
@@ -1338,30 +1870,15 @@
           }
 
           if (!explorerRoute.routeId) {
-            container.innerHTML = `<div class="text-xs text-brand-gray p-4 text-center">找不到此嶼巴路線，請確認路線號碼</div>`;
+            container.innerHTML = `<div class="text-xs text-slateGray p-4 text-center font-bold">找不到此嶼巴路線，請確認路線號碼</div>`;
             return;
           }
 
-          const endpoints = [
-            `https://rt.data.gov.hk/v2/transport/nlb/stop.php?action=list&routeId=${explorerRoute.routeId}`,
-            `https://rt.data.gov.hk/v1/transport/nlb/stop.php?action=list&routeId=${explorerRoute.routeId}`
-          ];
-
-          let data = null;
-          for (const url of endpoints) {
-            try {
-              const res = await fetch(url);
-              if (res.ok) {
-                data = await res.json();
-                if (data && data.stops && Array.isArray(data.stops) && data.stops.length > 0) break;
-              }
-            } catch (e) {
-              console.warn("NLB Stop fetch error:", url, e);
-            }
-          }
+          const res = await fetch(`https://rt.data.gov.hk/v2/transport/nlb/stop.php?action=list&routeId=${explorerRoute.routeId}`);
+          const data = await res.json();
 
           if (!data || !data.stops || data.stops.length === 0) {
-            container.innerHTML = `<div class="text-xs text-brand-gray p-4 text-center">未有嶼巴站表資料，請稍後重試</div>`;
+            container.innerHTML = `<div class="text-xs text-slateGray p-4 text-center font-bold">未有嶼巴站表資料，請稍後重試</div>`;
             return;
           }
 
@@ -1373,16 +1890,16 @@
               String(b.stopId) === String(s.stopId)
             );
             return `
-              <div onclick="addStopToMonitoredBoard('${s.stopId}', '${stopName}')" class="p-3 rounded-2xl flex items-center justify-between cursor-pointer transition ${isAlreadyMonitored ? 'bg-teal-50 border border-teal-200' : 'bg-canvas hover:bg-gray-200/70'}">
+              <div onclick="addStopToMonitoredBoard('${s.stopId}', '${stopName}')" class="p-3.5 rounded-2xl flex items-center justify-between cursor-pointer transition ${isAlreadyMonitored ? 'bg-lavender-light border border-lavender/30' : 'bg-surface hover:bg-surfaceHover'}">
                 <div class="flex items-center space-x-3 text-xs">
-                  <span class="opacity-60 font-bold">${s.stopSeq || idx + 1}.</span>
-                  <span class="font-bold text-brand-dark">${stopName}</span>
+                  <span class="text-slateGray font-bold">${s.stopSeq || idx + 1}.</span>
+                  <span class="font-bold text-charcoal">${stopName}</span>
                 </div>
                 <div class="flex items-center space-x-1.5">
                   ${isAlreadyMonitored ? `
-                    <span class="text-[10px] bg-brand-nlb text-white font-extrabold px-2 py-0.5 rounded-full">已在看板</span>
+                    <span class="text-[10px] bg-lavender text-white font-bold px-2.5 py-1 rounded-full">已在看板</span>
                   ` : `
-                    <span class="text-[10px] bg-brand-orange text-white font-extrabold px-2 py-0.5 rounded-full">＋ 加入</span>
+                    <span class="text-[10px] bg-charcoal text-white font-bold px-2.5 py-1 rounded-full">＋ 加入</span>
                   `}
                 </div>
               </div>
@@ -1408,17 +1925,17 @@
             );
 
             return `
-              <div onclick="addStopToMonitoredBoard('${staCode}', '${staName}')" class="p-3 rounded-2xl flex items-center justify-between cursor-pointer transition ${isAlreadyMonitored ? 'bg-amber-50 border border-amber-200' : 'bg-canvas hover:bg-gray-200/70'}">
+              <div onclick="addStopToMonitoredBoard('${staCode}', '${staName}')" class="p-3.5 rounded-2xl flex items-center justify-between cursor-pointer transition ${isAlreadyMonitored ? 'bg-lavender-light border border-lavender/30' : 'bg-surface hover:bg-surfaceHover'}">
                 <div class="flex items-center space-x-3 text-xs">
-                  <span class="opacity-60 font-bold">${idx + 1}.</span>
-                  <span class="font-bold text-brand-dark">${staName}站</span>
-                  <span class="text-[10px] text-brand-gray font-mono">(${staCode})</span>
+                  <span class="text-slateGray font-bold">${idx + 1}.</span>
+                  <span class="font-bold text-charcoal">${staName}站</span>
+                  <span class="text-[10px] text-slateGray font-mono">(${staCode})</span>
                 </div>
                 <div class="flex items-center space-x-1.5">
                   ${isAlreadyMonitored ? `
-                    <span class="text-[10px] bg-brand-mtr text-white font-extrabold px-2 py-0.5 rounded-full">已在看板</span>
+                    <span class="text-[10px] bg-lavender text-white font-bold px-2.5 py-1 rounded-full">已在看板</span>
                   ` : `
-                    <span class="text-[10px] bg-brand-orange text-white font-extrabold px-2 py-0.5 rounded-full">＋ 加入</span>
+                    <span class="text-[10px] bg-charcoal text-white font-bold px-2.5 py-1 rounded-full">＋ 加入</span>
                   `}
                 </div>
               </div>
@@ -1432,7 +1949,7 @@
           const data = await res.json();
 
           if (!data.data || data.data.length === 0) {
-            container.innerHTML = `<div class="text-xs text-brand-gray p-4 text-center">未有城巴站表資料，請切換方向重試</div>`;
+            container.innerHTML = `<div class="text-xs text-slateGray p-4 text-center font-bold">未有城巴站表資料，請切換方向重試</div>`;
             return;
           }
 
@@ -1446,16 +1963,16 @@
           container.innerHTML = stopsWithNames.map(item => {
             const isAlreadyMonitored = monitoredBuses.some(b => b.company === 'CTB' && b.route === explorerRoute.route && String(b.stopId) === String(item.stop));
             return `
-              <div onclick="addStopToMonitoredBoard('${item.stop}', '${item.stopName}')" class="p-3 rounded-2xl flex items-center justify-between cursor-pointer transition ${isAlreadyMonitored ? 'bg-amber-50 border border-amber-200' : 'bg-canvas hover:bg-gray-200/70'}">
+              <div onclick="addStopToMonitoredBoard('${item.stop}', '${item.stopName}')" class="p-3.5 rounded-2xl flex items-center justify-between cursor-pointer transition ${isAlreadyMonitored ? 'bg-lavender-light border border-lavender/30' : 'bg-surface hover:bg-surfaceHover'}">
                 <div class="flex items-center space-x-3 text-xs">
-                  <span class="opacity-60 font-bold">${item.seq}.</span>
-                  <span class="font-bold text-brand-dark">${item.stopName}</span>
+                  <span class="text-slateGray font-bold">${item.seq}.</span>
+                  <span class="font-bold text-charcoal">${item.stopName}</span>
                 </div>
                 <div class="flex items-center space-x-1.5">
                   ${isAlreadyMonitored ? `
-                    <span class="text-[10px] bg-amber-500 text-white font-extrabold px-2 py-0.5 rounded-full">已在看板</span>
+                    <span class="text-[10px] bg-lavender text-white font-bold px-2.5 py-1 rounded-full">已在看板</span>
                   ` : `
-                    <span class="text-[10px] bg-brand-orange text-white font-extrabold px-2 py-0.5 rounded-full">＋ 加入</span>
+                    <span class="text-[10px] bg-charcoal text-white font-bold px-2.5 py-1 rounded-full">＋ 加入</span>
                   `}
                 </div>
               </div>
@@ -1483,7 +2000,7 @@
           const data = await res.json();
 
           if (!data.data || data.data.length === 0) {
-            container.innerHTML = `<div class="text-xs text-brand-gray p-4 text-center">未有站表資料，請嘗試切換方向</div>`;
+            container.innerHTML = `<div class="text-xs text-slateGray p-4 text-center font-bold">未有站表資料，請嘗試切換方向</div>`;
             return;
           }
 
@@ -1502,16 +2019,16 @@
               b.direction === explorerRoute.direction
             );
             return `
-              <div onclick="addStopToMonitoredBoard('${item.stop}', '${item.stopName}')" class="p-3 rounded-2xl flex items-center justify-between cursor-pointer transition ${isAlreadyMonitored ? 'bg-red-50 border border-red-200' : 'bg-canvas hover:bg-gray-200/70'}">
+              <div onclick="addStopToMonitoredBoard('${item.stop}', '${item.stopName}')" class="p-3.5 rounded-2xl flex items-center justify-between cursor-pointer transition ${isAlreadyMonitored ? 'bg-lavender-light border border-lavender/30' : 'bg-surface hover:bg-surfaceHover'}">
                 <div class="flex items-center space-x-3 text-xs">
-                  <span class="opacity-60 font-bold">${item.seq}.</span>
-                  <span class="font-bold text-brand-dark">${item.stopName}</span>
+                  <span class="text-slateGray font-bold">${item.seq}.</span>
+                  <span class="font-bold text-charcoal">${item.stopName}</span>
                 </div>
                 <div class="flex items-center space-x-1.5">
                   ${isAlreadyMonitored ? `
-                    <span class="text-[10px] bg-brand-kmb text-white font-extrabold px-2 py-0.5 rounded-full">已在看板</span>
+                    <span class="text-[10px] bg-lavender text-white font-bold px-2.5 py-1 rounded-full">已在看板</span>
                   ` : `
-                    <span class="text-[10px] bg-brand-orange text-white font-extrabold px-2 py-0.5 rounded-full">＋ 加入</span>
+                    <span class="text-[10px] bg-charcoal text-white font-bold px-2.5 py-1 rounded-full">＋ 加入</span>
                   `}
                 </div>
               </div>
@@ -1520,7 +2037,7 @@
         }
       } catch (e) {
         console.error("Render stops explorer error", e);
-        container.innerHTML = `<div class="text-xs text-brand-gray p-4 text-center">讀取站表失敗，請稍後重試</div>`;
+        container.innerHTML = `<div class="text-xs text-slateGray p-4 text-center font-bold">讀取站表失敗，請稍後重試</div>`;
       }
     }
 
@@ -1556,7 +2073,7 @@
             return;
           }
         }
-        showToast("此嶼巴路線為單向或循環線。");
+        showToast("此路線為單向或循環線。");
         return;
       }
 
@@ -1590,12 +2107,14 @@
       renderStopsExplorerModal();
     }
 
-    // Bookmarks List Inside Modal
+    // =========================================================================
+    // Bookmarks & Search Modals
+    // =========================================================================
     function renderBookmarksList() {
       const container = document.getElementById('bookmarksListContainer');
       if (bookmarks.length === 0) {
         container.innerHTML = `
-          <div class="text-xs text-brand-gray p-6 text-center">
+          <div class="text-xs text-slateGray p-6 text-center font-bold">
             未有收藏記錄，在看板卡片點擊 ⭐ 即可將常用路線加入收藏庫！
           </div>`;
         return;
@@ -1604,27 +2123,23 @@
       let html = '';
       bookmarks.forEach((b, idx) => {
         const isMtr = b.company === 'MTR';
-        const mtrLineInfo = isMtr ? (MTR_LINES[b.line] || MTR_LINES[b.route]) : null;
         const comp = COMPANY_CONFIG[b.company || 'KMB'] || COMPANY_CONFIG.KMB;
         const isMonitored = monitoredBuses.some(m => m.company === b.company && m.route === b.route && String(m.stopId) === String(b.stopId) && (!isMtr || m.direction === b.direction));
 
-        const pillBg = mtrLineInfo ? mtrLineInfo.pillBg : comp.pillBg;
-        const pillText = mtrLineInfo ? mtrLineInfo.pillText : comp.pillText;
-
         html += `
-          <div class="p-3 bg-canvas rounded-2xl flex items-center justify-between transition hover:bg-gray-200/60">
+          <div class="p-3.5 bg-surface rounded-2xl flex items-center justify-between transition hover:bg-surfaceHover">
             <div>
-              <div class="flex items-center gap-1.5">
-                <span class="text-[10px] px-1.5 py-0.5 rounded ${pillBg} ${pillText} font-bold">${comp.name}</span>
-                <span class="text-sm font-extrabold text-brand-dark">${b.route}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-white text-charcoal font-bold border border-slateGray-border">${comp.name}</span>
+                <span class="text-sm font-black text-charcoal-heading">${b.route}</span>
               </div>
-              <div class="text-xs text-brand-gray mt-0.5">${b.stopName} 往 ${b.dest || '終點站'}</div>
+              <div class="text-xs text-slateGray font-medium mt-1">${b.stopName} 往 ${b.dest || '終點站'}</div>
             </div>
             <div class="flex items-center space-x-1.5">
-              <button onclick="addBookmarkToBoard(${idx})" class="text-xs font-bold px-2.5 py-1 rounded-xl transition ${isMonitored ? 'bg-gray-200 text-gray-600' : 'bg-brand-orange text-white active:scale-95'}">
+              <button onclick="addBookmarkToBoard(${idx})" class="text-xs font-bold px-3 py-1.5 rounded-full transition ${isMonitored ? 'bg-slateGray-border text-slateGray' : 'bg-lavender text-white active:scale-95'}">
                 ${isMonitored ? '已在看板' : '＋ 加看板'}
               </button>
-              <button onclick="removeBookmark(${idx})" class="text-xs text-gray-400 hover:text-red-500 p-2">✕</button>
+              <button onclick="removeBookmark(${idx})" class="w-7 h-7 rounded-full bg-white text-slateGray hover:text-roseAccent flex items-center justify-center text-xs font-bold">✕</button>
             </div>
           </div>
         `;
@@ -1657,7 +2172,7 @@
       saveMonitoredBuses();
       showToast(`已將 ${b.route} 加入看板`);
       renderBookmarksList();
-      refreshAllBusesETA();
+      refreshAllCommuteData();
     }
 
     function removeBookmark(idx) {
@@ -1665,10 +2180,9 @@
       localStorage.setItem('hk_bookmarks_ultramin_v2', JSON.stringify(bookmarks));
       showToast(`已從收藏庫移除 ${removed[0]?.route || ''}`);
       renderBookmarksList();
-      refreshAllBusesETA();
+      refreshAllCommuteData();
     }
 
-    // Modal Control Functions
     function toggleBookmarksModal(show) {
       const modal = document.getElementById('bookmarksModal');
       if (show) {
@@ -1705,9 +2219,9 @@
         const btn = document.getElementById('filter' + c);
         if (!btn) return;
         if (c.toUpperCase() === comp) {
-          btn.className = "flex-1 py-1.5 px-2 text-xs font-bold rounded-xl transition bg-white text-brand-dark shadow-sm shrink-0";
+          btn.className = "flex-1 py-1.5 px-3 text-xs font-bold rounded-full transition bg-white text-charcoal shrink-0";
         } else {
-          btn.className = "flex-1 py-1.5 px-2 text-xs font-bold rounded-xl transition text-brand-gray shrink-0";
+          btn.className = "flex-1 py-1.5 px-3 text-xs font-bold rounded-full transition text-slateGray shrink-0";
         }
       });
 
@@ -1762,6 +2276,26 @@
 
       let matches = [];
 
+      if (searchFilterCompany === 'ALL' || searchFilterCompany === 'KMB') {
+        const kmbRoutes = await fetchKmbRoutes();
+        const kmbMatches = kmbRoutes.filter(r => r.route.toUpperCase().startsWith(input) || r.route.toUpperCase() === input);
+        
+        if (kmbMatches.length > 0) {
+          kmbMatches.slice(0, 6).forEach(r => {
+            const dir = (r.bound === 'I' || r.bound === 'inbound') ? 'inbound' : 'outbound';
+            matches.push({
+              company: 'KMB',
+              route: r.route,
+              serviceType: r.service_type || '1',
+              direction: dir,
+              dest: r.dest_tc,
+              label: `九巴/龍運 ${r.route}`,
+              subLabel: `往 ${r.dest_tc} (由 ${r.orig_tc})`
+            });
+          });
+        }
+      }
+
       if (searchFilterCompany === 'ALL' || searchFilterCompany === 'NLB') {
         const nlbRoutes = await fetchNlbRoutes();
         const nlbMatches = nlbRoutes.filter(r => r.routeNo.toUpperCase().startsWith(input) || r.routeNo.toUpperCase() === input);
@@ -1782,8 +2316,7 @@
             direction: 'outbound',
             dest: dest,
             label: `嶼巴 ${r.routeNo}`,
-            subLabel: `往 ${dest}`,
-            tagBg: 'bg-teal-50 text-teal-700'
+            subLabel: `往 ${dest}`
           });
         });
       }
@@ -1799,8 +2332,7 @@
             direction: 'outbound',
             dest: r.dest_tc || '終點站',
             label: `城巴 ${r.route}`,
-            subLabel: `往 ${r.dest_tc || '終點站'}`,
-            tagBg: 'bg-amber-50 text-amber-700'
+            subLabel: `往 ${r.dest_tc || '終點站'}`
           });
         });
       }
@@ -1815,53 +2347,21 @@
               direction: 'UP',
               dest: l.upDest,
               label: `港鐵 ${l.name}`,
-              subLabel: `${l.downDest} ⇄ ${l.upDest}`,
-              tagBg: 'bg-red-50 text-[#A22030]'
+              subLabel: `${l.downDest} ⇄ ${l.upDest}`
             });
           }
-        }
-      }
-
-      if (searchFilterCompany === 'ALL' || searchFilterCompany === 'KMB') {
-        const kmbRoutes = await fetchKmbRoutes();
-        const kmbMatches = kmbRoutes.filter(r => r.route.toUpperCase().startsWith(input) || r.route.toUpperCase() === input);
-        
-        if (kmbMatches.length > 0) {
-          kmbMatches.slice(0, 6).forEach(r => {
-            const dir = (r.bound === 'I' || r.bound === 'inbound') ? 'inbound' : 'outbound';
-            matches.push({
-              company: 'KMB',
-              route: r.route,
-              serviceType: r.service_type || '1',
-              direction: dir,
-              dest: r.dest_tc,
-              label: `九巴/龍運 ${r.route}`,
-              subLabel: `往 ${r.dest_tc} (由 ${r.orig_tc})`,
-              tagBg: 'bg-red-50 text-red-600'
-            });
-          });
-        } else {
-          matches.push({
-            company: 'KMB',
-            route: input,
-            direction: 'outbound',
-            dest: '',
-            label: `九巴/龍運 ${input}`,
-            subLabel: `搜尋 ${input} 號線全綫站表`,
-            tagBg: 'bg-red-50 text-red-600'
-          });
         }
       }
 
       if (matches.length > 0) {
         container.innerHTML = matches.map(m => `
           <div onclick="selectDirectRoute('${m.company}', '${m.route}', '${m.routeId || ''}', '${m.dest || ''}', '${m.line || ''}', '${m.direction || 'outbound'}')" 
-               class="p-2.5 bg-white rounded-xl flex items-center justify-between cursor-pointer hover:bg-orange-50 transition border border-gray-100 shadow-sm">
+               class="p-3 bg-white rounded-2xl flex items-center justify-between cursor-pointer hover:bg-lavender-light transition border border-slateGray-border/50">
             <div class="flex items-center space-x-2">
-              <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-lg ${m.tagBg}">${m.company}</span>
-              <span class="text-xs font-extrabold text-brand-dark">${m.label}</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface text-charcoal border border-slateGray-border">${m.company}</span>
+              <span class="text-xs font-bold text-charcoal-heading">${m.label}</span>
             </div>
-            <span class="text-[11px] font-semibold text-brand-gray truncate max-w-[170px]">${m.subLabel}</span>
+            <span class="text-[11px] font-medium text-slateGray truncate max-w-[170px]">${m.subLabel}</span>
           </div>
         `).join('');
         container.classList.remove('hidden');
@@ -1883,15 +2383,11 @@
           const bound = direction === 'inbound' ? 'I' : 'O';
           const matched = routes.find(r => r.route.toUpperCase() === route.toUpperCase() && r.bound === bound) 
                        || routes.find(r => r.route.toUpperCase() === route.toUpperCase());
-          if (matched) {
-            finalDest = matched.dest_tc;
-          }
+          if (matched) finalDest = matched.dest_tc;
         } else if (company === 'CTB') {
           const routes = await fetchCtbRoutes();
           const matched = routes.find(r => r.route.toUpperCase() === route.toUpperCase());
-          if (matched) {
-            finalDest = direction === 'inbound' ? (matched.orig_tc || matched.dest_tc) : matched.dest_tc;
-          }
+          if (matched) finalDest = direction === 'inbound' ? (matched.orig_tc || matched.dest_tc) : matched.dest_tc;
         } else if (company === 'NLB') {
           const routes = await fetchNlbRoutes();
           const matched = routes.find(r => r.routeNo.toUpperCase() === route.toUpperCase());
@@ -1942,45 +2438,11 @@
         }
       }
 
-      const nlbRoutes = await fetchNlbRoutes();
-      const nlbMatch = nlbRoutes.find(r => r.routeNo.toUpperCase() === input);
+      const kmbRoutes = await fetchKmbRoutes();
+      const kmbMatch = kmbRoutes.find(r => r.route.toUpperCase() === input && r.bound === 'O')
+                    || kmbRoutes.find(r => r.route.toUpperCase() === input);
 
-      if (searchFilterCompany === 'NLB' || (searchFilterCompany === 'ALL' && nlbMatch)) {
-        let dest = '大嶼山';
-        if (nlbMatch && nlbMatch.routeName_c) {
-          if (nlbMatch.routeName_c.includes('>')) {
-            const parts = nlbMatch.routeName_c.split('>');
-            dest = parts.length > 1 ? parts[1].trim() : parts[0].trim();
-          } else {
-            dest = nlbMatch.routeName_c;
-          }
-        }
-
-        explorerRoute = {
-          company: 'NLB',
-          line: '',
-          route: input,
-          direction: 'outbound',
-          serviceType: '1',
-          routeId: nlbMatch ? nlbMatch.routeId : '',
-          dest: dest
-        };
-      } else if (searchFilterCompany === 'CTB') {
-        const ctbRoutes = await fetchCtbRoutes();
-        const ctbMatch = ctbRoutes.find(r => r.route.toUpperCase() === input);
-        explorerRoute = {
-          company: 'CTB',
-          line: '',
-          route: input,
-          direction: 'outbound',
-          serviceType: '1',
-          routeId: '',
-          dest: ctbMatch ? (ctbMatch.dest_tc || '終點站') : '終點站'
-        };
-      } else {
-        const kmbRoutes = await fetchKmbRoutes();
-        const kmbMatch = kmbRoutes.find(r => r.route.toUpperCase() === input && r.bound === 'O')
-                      || kmbRoutes.find(r => r.route.toUpperCase() === input);
+      if (kmbMatch) {
         explorerRoute = {
           company: 'KMB',
           line: '',
@@ -1988,9 +2450,49 @@
           direction: 'outbound',
           serviceType: '1',
           routeId: '',
-          dest: kmbMatch ? (kmbMatch.dest_tc || '終點站') : '終點站'
+          dest: kmbMatch.dest_tc || '終點站'
         };
+        toggleSearchModal(false);
+        toggleStopsModal(true);
+        return;
       }
+
+      const nlbRoutes = await fetchNlbRoutes();
+      const nlbMatch = nlbRoutes.find(r => r.routeNo.toUpperCase() === input);
+
+      if (nlbMatch) {
+        let dest = '大嶼山';
+        if (nlbMatch.routeName_c) {
+          if (nlbMatch.routeName_c.includes('>')) {
+            const parts = nlbMatch.routeName_c.split('>');
+            dest = parts.length > 1 ? parts[1].trim() : parts[0].trim();
+          } else {
+            dest = nlbMatch.routeName_c;
+          }
+        }
+        explorerRoute = {
+          company: 'NLB',
+          line: '',
+          route: input,
+          direction: 'outbound',
+          serviceType: '1',
+          routeId: nlbMatch.routeId,
+          dest: dest
+        };
+        toggleSearchModal(false);
+        toggleStopsModal(true);
+        return;
+      }
+
+      explorerRoute = {
+        company: 'KMB',
+        line: '',
+        route: input,
+        direction: 'outbound',
+        serviceType: '1',
+        routeId: '',
+        dest: '終點站'
+      };
 
       toggleSearchModal(false);
       toggleStopsModal(true);
@@ -1998,7 +2500,7 @@
 
     function showToast(msg) {
       const toast = document.createElement('div');
-      toast.className = "fixed top-14 left-1/2 -translate-x-1/2 bg-brand-dark/95 backdrop-blur text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl z-50 transition-all border border-white/10";
+      toast.className = "fixed top-14 left-1/2 -translate-x-1/2 bg-charcoal text-white text-xs font-bold px-4 py-2.5 rounded-full z-50 transition-all border border-slateGray-border/30";
       toast.innerText = msg;
       document.body.appendChild(toast);
       setTimeout(() => toast.remove(), 2500);
